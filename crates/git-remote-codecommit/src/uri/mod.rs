@@ -132,11 +132,7 @@ trait SingleExt: IntoIterator {
     {
         let mut iter = self.into_iter();
         let first = iter.next()?;
-        if iter.next().is_some() {
-            None
-        } else {
-            Some(first)
-        }
+        iter.next().is_none().then_some(first)
     }
 }
 
