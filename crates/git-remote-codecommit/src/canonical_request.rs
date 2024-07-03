@@ -29,3 +29,37 @@ impl core::fmt::Display for CanonicalRequest<'_> {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let s = CanonicalRequest {
+            repo: "my-repo",
+            hostname: "git-codecommit.us-east-1.amazonaws.com",
+        }
+        .to_string();
+
+        assert_eq!(
+            s,
+            "GIT\n/v1/repos/my-repo\n\nhost:git-codecommit.us-east-1.amazonaws.com\n\nhost\n"
+        )
+    }
+
+    #[test]
+    fn test_sha256() {
+        let s = CanonicalRequest {
+            repo: "my-repo",
+            hostname: "git-codecommit.us-east-1.amazonaws.com",
+        }
+        .sha256()
+        .to_string();
+
+        assert_eq!(
+            s,
+            "a1d3c427fe57dc90a0031cb03cef21be70874879bb17c5c2ab29dfda0f514c7a"
+        );
+    }
+}

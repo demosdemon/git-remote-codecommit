@@ -26,3 +26,29 @@ impl core::fmt::Display for StringToSign<'_> {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_string() {
+        let s = StringToSign {
+            timestamp: SystemTime::UNIX_EPOCH,
+            credential_scope: CredentialScope {
+                timestamp: SystemTime::UNIX_EPOCH,
+                region: "us-east-1",
+            },
+            canonical_request: CanonicalRequest {
+                repo: "my-repo",
+                hostname: "git-codecommit.us-east-1.amazonaws.com",
+            },
+        }
+        .to_string();
+
+        assert_eq!(
+            s,
+            "AWS4-HMAC-SHA256\n19700101T000000\n19700101/us-east-1/codecommit/aws4_request\na1d3c427fe57dc90a0031cb03cef21be70874879bb17c5c2ab29dfda0f514c7a"
+        );
+    }
+}

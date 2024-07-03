@@ -19,3 +19,20 @@ impl core::fmt::Display for InferredHostname<'_> {
         write!(f, "git-codecommit.{region}.{partition}")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cn() {
+        let s = InferredHostname::new("cn-north-1").to_string();
+        assert_eq!(s, "git-codecommit.cn-north-1.amazonaws.com.cn")
+    }
+
+    #[test]
+    fn test_iad() {
+        let s = InferredHostname::new("us-east-1").to_string();
+        assert_eq!(s, "git-codecommit.us-east-1.amazonaws.com")
+    }
+}
