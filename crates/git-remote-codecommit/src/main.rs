@@ -108,7 +108,12 @@ fn main() -> anyhow::Result<()> {
     let sdk_context = SdkContext::load_context_sync(parsed_uri.region(), parsed_uri.profile())?;
     debug!(?sdk_context, "loaded sdk context");
 
-    let url = generate_url(parsed_uri, code_commit_endpoint, sdk_context);
+    let url = generate_url(
+        SystemTime::now(),
+        parsed_uri,
+        code_commit_endpoint,
+        sdk_context,
+    );
     debug!(?url, "generated url");
 
     let err = exec::execvp("git", ["git", "remote-https", &remote_name, &url]);
@@ -116,6 +121,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn generate_url(
+    timestamp: SystemTime,
     parsed_uri: ParsedUri<'_>,
     override_endpoint: Option<String>,
     sdk_context: SdkContext,
@@ -131,7 +137,7 @@ fn generate_url(
     .to_string();
     debug!(?username, "generated username");
 
-    let signature = generate_signature(&hostname, parsed_uri.repository(), &sdk_context);
+    let signature = generate_signature(timestamp, &hostname, parsed_uri.repository(), &sdk_context);
     debug!(?signature, "generated signature");
 
     format!(
@@ -141,9 +147,13 @@ fn generate_url(
     )
 }
 
-fn generate_signature(hostname: &str, repo: &str, context: &SdkContext) -> String {
+fn generate_signature(
+    timestamp: SystemTime,
+    hostname: &str,
+    repo: &str,
+    context: &SdkContext,
+) -> String {
     let region = context.region().as_ref();
-    let timestamp = SystemTime::now();
 
     let string_to_sign = StringToSign {
         timestamp,
@@ -176,4 +186,117 @@ fn generate_signature(hostname: &str, repo: &str, context: &SdkContext) -> Strin
         timestamp.sigv4_timestamp(),
         signature.hex_display()
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use aws_config::BehaviorVersion;
+    use aws_config::SdkConfig;
+    use aws_credential_types::Credentials;
+
+    use super::*;
+
+    async fn load_test_sdk_config() -> SdkConfig {
+        aws_config::ConfigLoader::default()
+            .behavior_version(BehaviorVersion::v2024_03_28())
+            .region("us-east-1")
+            .credentials_provider(Credentials::for_tests())
+            .load()
+            .await
+    }
+
+    async fn load_test_sdk_config_with_session_token() -> SdkConfig {
+        aws_config::ConfigLoader::default()
+            .behavior_version(BehaviorVersion::v2024_03_28())
+            .region("us-east-1")
+            .credentials_provider(Credentials::for_tests_with_session_token())
+            .load()
+            .await
+    }
+
+    #[test]
+    fn test_generate_url() {
+        let sdk_context = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build tokio runtime")
+            .block_on(async {
+                let config = load_test_sdk_config().await;
+                SdkContext::from_sdk_config(config).await
+            })
+            .expect("failed to load context");
+
+        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+
+        let url = generate_url(SystemTime::UNIX_EPOCH, parsed_url, None, sdk_context);
+
+        assert_eq!(url, "https://ANOTREAL:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
+    }
+
+    #[test]
+    fn test_generate_url_with_override() {
+        let sdk_context = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build tokio runtime")
+            .block_on(async {
+                let config = load_test_sdk_config().await;
+                SdkContext::from_sdk_config(config).await
+            })
+            .expect("failed to load context");
+
+        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+
+        let url = generate_url(
+            SystemTime::UNIX_EPOCH,
+            parsed_url,
+            Some("localhost:8443".to_owned()),
+            sdk_context,
+        );
+
+        assert_eq!(url, "https://ANOTREAL:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");
+    }
+
+    #[test]
+    fn test_generate_url_with_session_token() {
+        let sdk_context = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build tokio runtime")
+            .block_on(async {
+                let config = load_test_sdk_config_with_session_token().await;
+                SdkContext::from_sdk_config(config).await
+            })
+            .expect("failed to load context");
+
+        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+
+        let url = generate_url(SystemTime::UNIX_EPOCH, parsed_url, None, sdk_context);
+
+        assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
+    }
+
+    #[test]
+    fn test_generate_url_with_session_token_with_override() {
+        let sdk_context = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build tokio runtime")
+            .block_on(async {
+                let config = load_test_sdk_config_with_session_token().await;
+                SdkContext::from_sdk_config(config).await
+            })
+            .expect("failed to load context");
+
+        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+
+        let url = generate_url(
+            SystemTime::UNIX_EPOCH,
+            parsed_url,
+            Some("localhost:8443".to_owned()),
+            sdk_context,
+        );
+
+        assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");
+    }
 }

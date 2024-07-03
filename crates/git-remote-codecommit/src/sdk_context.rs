@@ -4,6 +4,7 @@ use aws_config::meta::region::RegionProviderChain;
 use aws_config::AppName;
 use aws_config::BehaviorVersion;
 use aws_config::Region;
+use aws_config::SdkConfig;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::Credentials;
 
@@ -41,7 +42,10 @@ impl SdkContext {
         }
 
         let sdk_config = config_loader.load().await;
+        Self::from_sdk_config(sdk_config).await
+    }
 
+    pub async fn from_sdk_config(sdk_config: SdkConfig) -> anyhow::Result<Self> {
         let credentials = sdk_config
             .credentials_provider()
             .context("credentials not set")?

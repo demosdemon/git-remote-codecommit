@@ -284,4 +284,54 @@ mod tests {
             ParsedUri::try_from("codecommit://"),
         );
     }
+
+    #[test]
+    fn test_to_owned() {
+        let parsed_uri = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let owned = parsed_uri.into_owned();
+        assert_eq!(None, owned.region());
+        assert_eq!(None, owned.profile());
+        assert_eq!("my-repo", owned.repository());
+    }
+
+    #[test]
+    fn test_try_from_owned() {
+        let s = "codecommit://my-repo".to_owned();
+        let parsed_uri = ParsedUri::try_from(&s).expect("valid URI");
+        assert_eq!(None, parsed_uri.region());
+        assert_eq!(None, parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_to_string() {
+        let parsed_uri = ParsedUri::try_from("codecommit://my-repo")
+            .expect("valid URI")
+            .to_string();
+        assert_eq!("codecommit://my-repo", parsed_uri);
+    }
+
+    #[test]
+    fn test_to_string_with_profile() {
+        let parsed_uri = ParsedUri::try_from("codecommit://my-profile@my-repo")
+            .expect("valid URI")
+            .to_string();
+        assert_eq!("codecommit://my-profile@my-repo", parsed_uri);
+    }
+
+    #[test]
+    fn test_to_string_with_region() {
+        let parsed_uri = ParsedUri::try_from("codecommit::us-west-2://my-repo")
+            .expect("valid URI")
+            .to_string();
+        assert_eq!("codecommit::us-west-2://my-repo", parsed_uri);
+    }
+
+    #[test]
+    fn test_to_string_with_profile_and_region() {
+        let parsed_uri = ParsedUri::try_from("codecommit::us-west-2://my-profile@my-repo")
+            .expect("valid URI")
+            .to_string();
+        assert_eq!("codecommit::us-west-2://my-profile@my-repo", parsed_uri);
+    }
 }
