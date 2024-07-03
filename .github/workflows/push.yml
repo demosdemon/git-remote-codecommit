@@ -1,10 +1,8 @@
 name: Push to CodeCommit
-on:
-  workflow_run:
-    workflows: [ci]
-    branches: [main]
-    types:
-      - completed
+on: # does not wait for `ci` to finish
+  push:
+    branches:
+      - main
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -14,7 +12,7 @@ concurrency:
   group: push-to-codecommit
 
 env:
-  RUST_BACKTRACE: "1"
+  RUST_BACKTRACE: 1
   AWS_REGION: us-west-2
 
 jobs:

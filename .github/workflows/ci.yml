@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  RUST_BACKTRACE: "1"
+  RUST_BACKTRACE: 1
 
 jobs:
   style:
@@ -95,14 +95,17 @@ jobs:
         run: cargo install grcov
 
       - name: Run Rust tests with coverage
-        run: |
-          export CARGO_INCREMENTAL=0
-          export RUSTFLAGS='-Cinstrument-coverage'
-          export LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw'
-          cargo test
-          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./lcov.info
+        run: .github/scripts/collect-coverage.sh
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/debug/coverage/lcov
+          flags: unittests
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: target/debug/coverage/html/
