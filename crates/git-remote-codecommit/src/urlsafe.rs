@@ -18,11 +18,37 @@ impl core::fmt::Display for UrlSafeQuote<'_> {
 
             cur = idx + c.len_utf8();
         }
-        Ok(())
+
+        let slice = &self.0[cur..];
+        f.write_str(slice)
     }
 }
 
 const fn is_urlsafe(c: char) -> bool {
     // "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-~";
     matches!(c, 'A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '.' | '-' | '~')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_all_safe() {
+        const SAFE: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-~";
+        let s = UrlSafeQuote(SAFE).to_string();
+        assert_eq!(s, SAFE);
+    }
+
+    #[test]
+    fn test_with_unsafe() {
+        let s = UrlSafeQuote("abc/123").to_string();
+        assert_eq!(s, "abc%2F123");
+    }
+
+    #[test]
+    fn test_with_emoji() {
+        let s = UrlSafeQuote("abc/123/🦀").to_string();
+        assert_eq!(s, "abc%2F123%2F%F0%9F%A6%80");
+    }
 }
