@@ -1,4 +1,4 @@
-name: clone
+name: Push to CodeCommit
 on:
   workflow_run:
     workflows: [ci]
@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the history in order to push to CodeCommit
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
