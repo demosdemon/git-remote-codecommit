@@ -1,0 +1,46 @@
+name: clone
+on:
+  workflow_run:
+    workflows: [ci]
+    branches: [main]
+    types:
+      - completed
+
+concurrency:
+  group: push-to-codecommit
+
+env:
+  RUST_BACKTRACE: "1"
+  AWS_REGION: us-west-2
+
+jobs:
+  push-to-codecommit:
+    name: Push to CodeCommit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install git-remote-codecommit
+        run: cargo install --locked --profile=release-lto --path=crates/git-remote-codecommit
+
+      - name: Check version
+        run: git-remote-codecommit --version
+
+      - name: Push to CodeCommit
+        run: |
+          git remote add aws codecommit://git-remote-codecommit
+          git push aws HEAD:refs/heads/main
