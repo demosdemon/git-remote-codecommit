@@ -1,5 +1,7 @@
 mod error;
 
+use std::ops::Not;
+
 use uriparse::Host;
 use uriparse::RegisteredName;
 use uriparse::Scheme;
@@ -86,6 +88,11 @@ impl<'a> TryFrom<&'a str> for ParsedUri<'a> {
             _ => return Err(ParseUriError::UnexpectedIpForRepositoryName),
         };
 
+        repository
+            .is_empty()
+            .not()
+            .ok_or(ParseUriError::EmptyRepositoryName)?;
+
         // TODO: should this be validated? The original code validates it to
         // `\w{2}-\w*.*-\d` which is a bit too strict.
         let region = if scheme == SCHEME { None } else { Some(scheme) };
@@ -146,5 +153,139 @@ impl BoolExt for bool {
         } else {
             Err(or)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base_example() {
+        let parsed_uri = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        assert_eq!(None, parsed_uri.region());
+        assert_eq!(None, parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_base_example_with_profile() {
+        let parsed_uri = ParsedUri::try_from("codecommit://my-profile@my-repo").expect("valid URI");
+        assert_eq!(None, parsed_uri.region());
+        assert_eq!(Some("my-profile"), parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_region_example() {
+        let parsed_uri = ParsedUri::try_from("codecommit::us-east-1://my-repo").expect("valid URI");
+        assert_eq!(Some("us-east-1"), parsed_uri.region());
+        assert_eq!(None, parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_region_example_with_profile() {
+        let parsed_uri =
+            ParsedUri::try_from("codecommit::us-east-1://my-profile@my-repo").expect("valid URI");
+        assert_eq!(Some("us-east-1"), parsed_uri.region());
+        assert_eq!(Some("my-profile"), parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_region_from_git_example() {
+        let parsed_uri = ParsedUri::try_from("us-east-1://my-repo").expect("valid URI");
+        assert_eq!(Some("us-east-1"), parsed_uri.region());
+        assert_eq!(None, parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_region_from_git_example_with_profile() {
+        let parsed_uri = ParsedUri::try_from("us-east-1://my-profile@my-repo").expect("valid URI");
+        assert_eq!(Some("us-east-1"), parsed_uri.region());
+        assert_eq!(Some("my-profile"), parsed_uri.profile());
+        assert_eq!("my-repo", parsed_uri.repository());
+    }
+
+    #[test]
+    fn test_invalid_uri() {
+        assert!(matches!(
+            ParsedUri::try_from("codecommit::my-repo"),
+            Err(ParseUriError::InvalidUri(_))
+        ));
+    }
+
+    #[test]
+    fn test_missing_authority() {
+        assert_eq!(
+            Err(ParseUriError::MissingAuthority),
+            ParsedUri::try_from("codecommit:"),
+        );
+    }
+
+    #[test]
+    fn test_unexpected_path() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedPath),
+            ParsedUri::try_from("codecommit:///my-repo"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_query() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedQuery),
+            ParsedUri::try_from("codecommit://my-repo?query"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_fragment() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedFragment),
+            ParsedUri::try_from("codecommit://my-repo#fragment"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_password() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedPassword),
+            ParsedUri::try_from("codecommit://user:pass@my-repo"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_port() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedPort),
+            ParsedUri::try_from("codecommit://my-repo:1234"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_ipv4_for_repo() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedIpForRepositoryName),
+            ParsedUri::try_from("codecommit://127.0.0.1"),
+        )
+    }
+
+    #[test]
+    fn test_unexpected_ipv6_for_repo() {
+        assert_eq!(
+            Err(ParseUriError::UnexpectedIpForRepositoryName),
+            ParsedUri::try_from("codecommit://[::1]"),
+        )
+    }
+
+    #[test]
+    fn test_empty_repo_name() {
+        assert_eq!(
+            Err(ParseUriError::EmptyRepositoryName),
+            ParsedUri::try_from("codecommit://"),
+        );
     }
 }

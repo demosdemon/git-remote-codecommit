@@ -10,6 +10,7 @@ pub enum ParseUriError {
     UnexpectedPassword,
     UnexpectedPort,
     UnexpectedIpForRepositoryName,
+    EmptyRepositoryName,
 }
 
 impl From<URIError> for ParseUriError {
@@ -29,6 +30,7 @@ impl core::fmt::Display for ParseUriError {
             Self::UnexpectedPassword => f.write_str("unexpected password"),
             Self::UnexpectedPort => f.write_str("unexpected port"),
             Self::UnexpectedIpForRepositoryName => f.write_str("unexpected IP for repository name"),
+            Self::EmptyRepositoryName => f.write_str("empty repository name"),
         }
     }
 }

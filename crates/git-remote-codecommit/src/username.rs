@@ -13,3 +13,31 @@ impl core::fmt::Display for Username<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_without_token() {
+        let s = Username {
+            access_key_id: "AKIAIOSFODNN7EXAMPLE",
+            session_token: None,
+        }
+        .to_string();
+        assert_eq!(s, "AKIAIOSFODNN7EXAMPLE");
+    }
+
+    #[test]
+    fn test_with_token() {
+        let s = Username {
+            access_key_id: "AKIAIOSFODNN7EXAMPLE",
+            session_token: Some("IQoJb3JpZ2luX2VjELT//////////EXAMPLE"),
+        }
+        .to_string();
+        assert_eq!(
+            s,
+            "AKIAIOSFODNN7EXAMPLE%IQoJb3JpZ2luX2VjELT//////////EXAMPLE"
+        );
+    }
+}
