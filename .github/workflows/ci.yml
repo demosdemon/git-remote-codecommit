@@ -73,3 +73,33 @@ jobs:
 
       - name: Run Tests (all features)
         run: cargo test --workspace --all-features
+
+  coverage:
+    name: Run tests with coverage
+    needs: [check-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+
+      - name: Install grcov
+        run: cargo install grcov
+
+      - name: Run Rust tests with coverage
+        run: |
+          export CARGO_INCREMENTAL=0
+          export RUSTFLAGS='-Cinstrument-coverage'
+          export LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw'
+          cargo test
+          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./lcov.info
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
