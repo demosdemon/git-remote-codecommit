@@ -88,6 +88,9 @@ jobs:
           toolchain: nightly
           components: llvm-tools-preview
 
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Install grcov
         run: cargo install grcov
 
