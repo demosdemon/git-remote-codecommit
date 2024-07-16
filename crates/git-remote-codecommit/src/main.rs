@@ -138,7 +138,7 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
     anyhow::bail!("failed to execute git: {err}")
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
 fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
     use std::os::windows::process::ExitCodeExt;
 
@@ -150,7 +150,6 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
     // sent to all processes attached to the console, including the parent
     // process. Therefore, by ignoring the ctrl-c, we let the child handle the
     // signal and exit. We can reap the process normally.
-    #[cfg(windows)]
     ctrlc::set_handler(|| {}).context("failed to set ctrl-c handler")?;
 
     let exit = cmd
@@ -160,6 +159,21 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
         .context("failed to wait for subprocess")?;
 
     Ok(ExitCode::from_raw(exit.code().unwrap_or(0) as u32))
+}
+
+#[cfg(not(any(unix, windows)))]
+fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
+    let exit = cmd
+        .spawn()
+        .context("failed to spawn git process")?
+        .wait()
+        .context("failed to wait for subprocess")?;
+
+    if exit.success() {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(ExitCode::FAILURE)
+    }
 }
 
 fn generate_url(
