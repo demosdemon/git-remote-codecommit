@@ -53,22 +53,22 @@ jobs:
           shared-key: ${{ matrix.os }}-${{ matrix.rust }}
 
       - name: Run Clippy (no default features)
-        run: cargo clippy --workspace --all-targets --no-default-features
+        run: cargo clippy --locked --workspace --all-targets --no-default-features
 
       - name: Run Clippy (default features)
-        run: cargo clippy --workspace --all-targets
+        run: cargo clippy --locked --workspace --all-targets
 
       - name: Run Clippy (all features)
-        run: cargo clippy --workspace --all-targets --all-features
+        run: cargo clippy --locked --workspace --all-targets --all-features
 
       - name: Run Tests (no default features)
-        run: cargo test --workspace --no-default-features
+        run: cargo test --locked --workspace --no-default-features
 
       - name: Run Tests (default features)
-        run: cargo test --workspace
+        run: cargo test --locked --workspace
 
       - name: Run Tests (all features)
-        run: cargo test --workspace --all-features
+        run: cargo test --locked --workspace --all-features
 
   coverage:
     name: Run tests with coverage
