@@ -1,3 +1,5 @@
+#![cfg_attr(windows, feature(windows_process_exit_code_from))]
+
 mod canonical_request;
 mod credential_scope;
 mod datetime;
@@ -10,7 +12,7 @@ mod uri;
 mod urlsafe;
 mod username;
 
-use std::process::ExitStatus;
+use std::process::ExitCode;
 use std::time::SystemTime;
 
 use anyhow::Context;
@@ -87,7 +89,7 @@ struct Cli {
     remote_uri: String,
 }
 
-fn main() -> anyhow::Result<ExitStatus> {
+fn main() -> anyhow::Result<ExitCode> {
     crate::logging::init_logging();
     trace!("initialized logging");
 
@@ -130,14 +132,16 @@ fn main() -> anyhow::Result<ExitStatus> {
 }
 
 #[cfg(unix)]
-fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitStatus> {
+fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
     use std::os::unix::process::CommandExt;
     let err = cmd.exec();
     anyhow::bail!("failed to execute git: {err}")
 }
 
 #[cfg(not(unix))]
-fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitStatus> {
+fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
+    use std::os::windows::process::ExitCodeExt;
+
     // windows and other non-unix platforms don't support `execvp`, so we can't
     // replace the current process. Instead, we need to spawn a new process and
     // set up the pipes.
@@ -155,7 +159,7 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitStatus> {
         .wait()
         .context("failed to wait for subprocess")?;
 
-    Ok(exit)
+    Ok(ExitCode::from_raw(exit.code().unwrap_or(0) as u32))
 }
 
 fn generate_url(
