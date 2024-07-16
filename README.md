@@ -4,6 +4,15 @@ This is an implementation of [git-remote-codecommit](https://github.com/aws/git-
 written in Rust so that statically linked binaries can be generated instead of depending
 on Python.
 
+## Affiliation
+
+This project is not affiliated with AWS and is not used by AWS in any capacity known to
+the author. However, the author does work for AWS.
+
+## Supports
+
+Actively used on Windows, macOS, and low-resource Linux environments.
+
 ## Install
 
 ```shell
