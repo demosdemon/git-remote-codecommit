@@ -10,6 +10,7 @@ mod uri;
 mod urlsafe;
 mod username;
 
+use std::process::ExitStatus;
 use std::time::SystemTime;
 
 use anyhow::Context;
@@ -86,7 +87,7 @@ struct Cli {
     remote_uri: String,
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<ExitStatus> {
     crate::logging::init_logging();
     trace!("initialized logging");
 
@@ -116,8 +117,45 @@ fn main() -> anyhow::Result<()> {
     );
     debug!(?url, "generated url");
 
-    let err = exec::execvp("git", ["git", "remote-https", &remote_name, &url]);
+    let mut command = std::process::Command::new("git");
+    command
+        .arg("remote-https")
+        .arg(&remote_name)
+        .arg(&url)
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
+
+    exec_replace(command)
+}
+
+#[cfg(unix)]
+fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitStatus> {
+    use std::os::unix::process::CommandExt;
+    let err = cmd.exec();
     anyhow::bail!("failed to execute git: {err}")
+}
+
+#[cfg(not(unix))]
+fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitStatus> {
+    // windows and other non-unix platforms don't support `execvp`, so we can't
+    // replace the current process. Instead, we need to spawn a new process and
+    // set up the pipes.
+
+    // We setup a ctrlc handler and ignore it because on windows, this signal is
+    // sent to all processes attached to the console, including the parent
+    // process. Therefore, by ignoring the ctrl-c, we let the child handle the
+    // signal and exit. We can reap the process normally.
+    #[cfg(windows)]
+    ctrlc::set_handler(|| {}).context("failed to set ctrl-c handler")?;
+
+    let exit = cmd
+        .spawn()
+        .context("failed to spawn git process")?
+        .wait()
+        .context("failed to wait for subprocess")?;
+
+    Ok(exit)
 }
 
 fn generate_url(

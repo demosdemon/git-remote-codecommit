@@ -8,6 +8,9 @@ edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = "1.0.86"
 aws-config = "1.5.3"
@@ -15,7 +18,6 @@ aws-credential-types = "1.2.0"
 aws-sigv4 = { version = "1.2.2", default-features = false }
 chrono = { version = "0.4.38", default-features = false, features = ["std"] }
 clap = { version = "4.5.8", features = ["deprecated", "derive", "cargo", "env", "wrap_help"] }
-exec = "0.3.1"
 hmac = "0.12.1"
 sha2 = "0.10.8"
 tokio = { version = "1.38.0", features = ["mio", "rt"] }
@@ -23,5 +25,5 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 uriparse = "0.6.4"
 
-[lints]
-workspace = true
+[target."cfg(windows)".dependencies]
+ctrlc = "3.4.4"
