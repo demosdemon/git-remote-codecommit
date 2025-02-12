@@ -16,7 +16,8 @@ publish = false
 [workspace.lints.rust]
 let_underscore_drop = "warn"
 # unused_crate_dependencies = "warn"
-non_ascii_idents = "deny"
+# non_ascii_idents = "deny" (also in rust_2024_compatibility)
+rust_2024_compatibility = "warn"
 
 [workspace.lints.clippy]
 uninlined_format_args = "warn"

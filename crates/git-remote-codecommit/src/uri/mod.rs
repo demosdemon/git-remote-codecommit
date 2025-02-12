@@ -35,6 +35,7 @@ impl ParsedUri<'_> {
         self.repository.as_str()
     }
 
+    #[cfg_attr(not(test), expect(dead_code))]
     pub fn into_owned(self) -> ParsedUri<'static> {
         ParsedUri {
             region: self.region.map(Scheme::into_owned),
@@ -68,7 +69,7 @@ impl<'a> TryFrom<&'a str> for ParsedUri<'a> {
 
         path.segments()
             .single()
-            .map_or(false, |only| only.is_empty() || only == "/")
+            .is_some_and(|only| only.is_empty() || only == "/")
             .ok_or(ParseUriError::UnexpectedPath)?;
 
         query.is_none().ok_or(ParseUriError::UnexpectedQuery)?;
@@ -132,7 +133,12 @@ trait SingleExt: IntoIterator {
     {
         let mut iter = self.into_iter();
         let first = iter.next()?;
-        iter.next().is_none().then_some(first)
+        // note: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/temporary-tail-expr-scope.html
+        if iter.next().is_none() {
+            Some(first)
+        } else {
+            None
+        }
     }
 }
 

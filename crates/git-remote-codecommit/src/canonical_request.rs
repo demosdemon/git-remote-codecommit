@@ -13,7 +13,7 @@ pub struct CanonicalRequest<'a> {
 }
 
 impl CanonicalRequest<'_> {
-    pub fn sha256(&self) -> impl core::fmt::Display {
+    pub fn sha256(&self) -> impl core::fmt::Display + use<'_> {
         let mut hasher = sha2::Sha256::new();
         write!(hasher, "{self}").expect("writing to hasher cannot fail");
         hasher.finalize_fixed().hex_display()
