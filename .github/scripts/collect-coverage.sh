@@ -3,7 +3,7 @@
 set -eux -o pipefail
 
 export CARGO_INCREMENTAL='0'
-export RUSTFLAGS='-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+export RUSTFLAGS='-Cinstrument-coverage -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
 export LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw'
 
 cargo test --verbose --workspace
