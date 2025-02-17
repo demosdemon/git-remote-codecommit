@@ -11,7 +11,7 @@ repository = "https://github.com/demosdemon/git-remote-codecommit"
 homepage = "https://github.com/demosdemon/git-remote-codecommit"
 edition = "2021"
 license = "MIT or Apache-2.0"
-publish = false
+publish = true
 
 [workspace.lints.rust]
 let_underscore_drop = "warn"
