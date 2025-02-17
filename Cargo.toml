@@ -10,7 +10,7 @@ authors = ["Brandon LeBlanc <brandon@leblanc.codes>"]
 repository = "https://github.com/demosdemon/git-remote-codecommit"
 homepage = "https://github.com/demosdemon/git-remote-codecommit"
 edition = "2021"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 publish = true
 
 [workspace.lints.rust]
