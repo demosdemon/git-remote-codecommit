@@ -36,10 +36,10 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Fetch cargo dependencies
-        run: cargo fetch --verbose --locked
+        run: cargo v --locked
 
       - name: Install git-remote-codecommit
-        run: cargo install --frozen --profile=release-lto --path=crates/git-remote-codecommit
+        run: cargo v-install --frozen --profile=release-lto --path=crates/git-remote-codecommit
 
       - name: Check version
         run: git-remote-codecommit --version

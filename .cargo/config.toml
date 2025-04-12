@@ -11,6 +11,7 @@ v-clippy = "__vendored clippy"
 v-build = "__vendored build"
 v-run = "__vendored run"
 v-test = "__vendored test"
+v-install = "__vendored install"
 
 v = "vendor --verbose --versioned-dirs"
 
