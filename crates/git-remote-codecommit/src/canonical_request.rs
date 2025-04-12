@@ -45,7 +45,7 @@ mod tests {
         assert_eq!(
             s,
             "GIT\n/v1/repos/my-repo\n\nhost:git-codecommit.us-east-1.amazonaws.com\n\nhost\n"
-        )
+        );
     }
 
     #[test]

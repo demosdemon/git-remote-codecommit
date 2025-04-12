@@ -29,6 +29,6 @@ mod tests {
         }
         .to_string();
 
-        assert_eq!(s, "19700101/us-east-1/codecommit/aws4_request")
+        assert_eq!(s, "19700101/us-east-1/codecommit/aws4_request");
     }
 }

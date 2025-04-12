@@ -39,12 +39,12 @@ const URL_PATH_PREFIX: &str = "v1/repos";
 
 #[derive(Debug, Clone, Parser)]
 #[command(name = "git-remote-codecommit", version, about)]
-/// A Git remote helper for AWS CodeCommit.
+/// A Git remote helper for AWS `CodeCommit`.
 ///
 /// This is normally invoked by git any time it needs to interact with a remote
 /// with the `codecommit://` scheme.
 ///
-/// https://git-scm.com/docs/gitremote-helpers
+/// <https://git-scm.com/docs/gitremote-helpers>
 ///
 /// Git invokes the helper with one or two arguments; however, this helper
 /// requires both arguments to be present. See the url above for more details;
@@ -71,7 +71,7 @@ const URL_PATH_PREFIX: &str = "v1/repos";
 ///   - Note: Git strips the `codecommit::` prefix when invoking the helper and
 ///     the remote uses the region form.
 struct Cli {
-    /// Override the default AWS endpoint for CodeCommit.
+    /// Override the default AWS endpoint for `CodeCommit`.
     ///
     /// If not provided, the default is
     /// `git-codecommit.${region}.${aws-partition}`.
@@ -113,9 +113,9 @@ fn main() -> anyhow::Result<ExitCode> {
 
     let url = generate_url(
         SystemTime::now(),
-        parsed_uri,
-        code_commit_endpoint,
-        sdk_context,
+        &parsed_uri,
+        code_commit_endpoint.as_deref(),
+        &sdk_context,
     );
     debug!(?url, "generated url");
 
@@ -158,6 +158,7 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
         .wait()
         .context("failed to wait for subprocess")?;
 
+    #[allow(clippy::cast_sign_loss)]
     Ok(ExitCode::from_raw(exit.code().unwrap_or(0) as u32))
 }
 
@@ -178,12 +179,18 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
 
 fn generate_url(
     timestamp: SystemTime,
-    parsed_uri: ParsedUri<'_>,
-    override_endpoint: Option<String>,
-    sdk_context: SdkContext,
+    parsed_uri: &ParsedUri<'_>,
+    override_endpoint: Option<&str>,
+    sdk_context: &SdkContext,
 ) -> String {
-    let hostname = override_endpoint
-        .unwrap_or_else(|| InferredHostname::new(sdk_context.region().as_ref()).to_string());
+    let hostname = override_endpoint.map_or_else(
+        || {
+            std::borrow::Cow::Owned(
+                InferredHostname::new(sdk_context.region().as_ref()).to_string(),
+            )
+        },
+        std::borrow::Cow::Borrowed,
+    );
     debug!(?hostname, "using hostname for codecommit endpoint");
 
     let username = Username {
@@ -193,7 +200,7 @@ fn generate_url(
     .to_string();
     debug!(?username, "generated username");
 
-    let signature = generate_signature(timestamp, &hostname, parsed_uri.repository(), &sdk_context);
+    let signature = generate_signature(timestamp, &hostname, parsed_uri.repository(), sdk_context);
     debug!(?signature, "generated signature");
 
     format!(
@@ -254,7 +261,7 @@ mod tests {
 
     async fn load_test_sdk_config() -> SdkConfig {
         aws_config::ConfigLoader::default()
-            .behavior_version(BehaviorVersion::v2024_03_28())
+            .behavior_version(BehaviorVersion::v2025_01_17())
             .region("us-east-1")
             .credentials_provider(Credentials::for_tests())
             .load()
@@ -263,7 +270,7 @@ mod tests {
 
     async fn load_test_sdk_config_with_session_token() -> SdkConfig {
         aws_config::ConfigLoader::default()
-            .behavior_version(BehaviorVersion::v2024_03_28())
+            .behavior_version(BehaviorVersion::v2025_01_17())
             .region("us-east-1")
             .credentials_provider(Credentials::for_tests_with_session_token())
             .load()
@@ -284,7 +291,7 @@ mod tests {
 
         let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
 
-        let url = generate_url(SystemTime::UNIX_EPOCH, parsed_url, None, sdk_context);
+        let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
         assert_eq!(url, "https://ANOTREAL:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
     }
@@ -305,9 +312,9 @@ mod tests {
 
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
-            parsed_url,
-            Some("localhost:8443".to_owned()),
-            sdk_context,
+            &parsed_url,
+            Some("localhost:8443"),
+            &sdk_context,
         );
 
         assert_eq!(url, "https://ANOTREAL:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");
@@ -327,7 +334,7 @@ mod tests {
 
         let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
 
-        let url = generate_url(SystemTime::UNIX_EPOCH, parsed_url, None, sdk_context);
+        let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
         assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
     }
@@ -348,9 +355,9 @@ mod tests {
 
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
-            parsed_url,
-            Some("localhost:8443".to_owned()),
-            sdk_context,
+            &parsed_url,
+            Some("localhost:8443"),
+            &sdk_context,
         );
 
         assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");

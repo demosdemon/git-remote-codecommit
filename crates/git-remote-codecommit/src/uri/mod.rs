@@ -84,9 +84,8 @@ impl<'a> TryFrom<&'a str> for ParsedUri<'a> {
 
         port.is_none().ok_or(ParseUriError::UnexpectedPort)?;
 
-        let repository = match host {
-            Host::RegisteredName(rn) => rn,
-            _ => return Err(ParseUriError::UnexpectedIpForRepositoryName),
+        let Host::RegisteredName(repository) = host else {
+            return Err(ParseUriError::UnexpectedIpForRepositoryName);
         };
 
         repository
@@ -232,7 +231,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedPath),
             ParsedUri::try_from("codecommit:///my-repo"),
-        )
+        );
     }
 
     #[test]
@@ -240,7 +239,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedQuery),
             ParsedUri::try_from("codecommit://my-repo?query"),
-        )
+        );
     }
 
     #[test]
@@ -248,7 +247,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedFragment),
             ParsedUri::try_from("codecommit://my-repo#fragment"),
-        )
+        );
     }
 
     #[test]
@@ -256,7 +255,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedPassword),
             ParsedUri::try_from("codecommit://user:pass@my-repo"),
-        )
+        );
     }
 
     #[test]
@@ -264,7 +263,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedPort),
             ParsedUri::try_from("codecommit://my-repo:1234"),
-        )
+        );
     }
 
     #[test]
@@ -272,7 +271,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedIpForRepositoryName),
             ParsedUri::try_from("codecommit://127.0.0.1"),
-        )
+        );
     }
 
     #[test]
@@ -280,7 +279,7 @@ mod tests {
         assert_eq!(
             Err(ParseUriError::UnexpectedIpForRepositoryName),
             ParsedUri::try_from("codecommit://[::1]"),
-        )
+        );
     }
 
     #[test]

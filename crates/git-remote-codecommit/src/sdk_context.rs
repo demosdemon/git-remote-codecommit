@@ -33,7 +33,7 @@ impl SdkContext {
         override_profile: Option<&str>,
     ) -> anyhow::Result<Self> {
         let mut config_loader = aws_config::ConfigLoader::default()
-            .behavior_version(BehaviorVersion::v2024_03_28())
+            .behavior_version(BehaviorVersion::v2025_01_17())
             .region(region_provider(override_region))
             .app_name(app_name());
 
