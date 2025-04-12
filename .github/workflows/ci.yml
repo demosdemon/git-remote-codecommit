@@ -23,7 +23,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: clippy
+          components: rustfmt
           cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
 
       - name: Run Rustfmt
@@ -93,8 +93,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
-          - windows-latest
         rust:
           - nightly
     runs-on: ${{ matrix.os }}
@@ -106,7 +104,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: clippy
+          components: llvm-tools
           cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
 
       - name: Install grcov
@@ -131,20 +129,7 @@ jobs:
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@v2
         with:
-          flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}
-          parallel: true
-
-  finish:
-    needs: [coverage]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@v2
-        with:
-          parallel-finished: true
-          # TODO: is this needed? If so, automate value.
-          carryforward: "code-coverage-report-nightly-ubuntu-latest,code-coverage-report-nightly-macos-latest,code-coverage-report-nightly-windows-latest"
+          files: target/debug/coverage/lcov
 
   build-docs:
     name: Build Documentation
@@ -165,7 +150,6 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: clippy
           cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
 
       - name: Fetch cargo dependencies
@@ -214,3 +198,23 @@ jobs:
 
       - name: Build Binaries
         run: cargo build --verbose --bins --workspace --frozen --profile=release-lto
+
+      - name: Print diagnostics
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path .\target\release-lto
+
+      - name: Print diagnostics
+        if: runner.os != 'Windows'
+        run: |
+          ls -Al ./target/release-lto
+
+      - name: Upload Binaries as GitHub artifact
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: git-remote-codecommit-${{ matrix.os }}
+          path: |
+            target/release-lto/git-remote-codecommit
+            target/release-lto/git-remote-codecommit.exe
+          compression-level: 0
