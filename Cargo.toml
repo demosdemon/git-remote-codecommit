@@ -18,19 +18,23 @@ publish = true
 
 [workspace.lints.rust]
 let_underscore_drop = "warn"
-# unused_crate_dependencies = "warn"
-# non_ascii_idents = "deny" (also in rust_2024_compatibility)
-rust_2024_compatibility = "warn"
-
+# unused_crate_dependencies = "warn" # use `cargo udeps` instead
+non_ascii_idents = "deny"
+rust_2024_compatibility = { level = "warn", priority = -1 }
+ 
 [workspace.lints.clippy]
-uninlined_format_args = "warn"
+# struct_excessive_bools = "allow"
+missing_panics_doc = "allow"
+missing_errors_doc = "allow"
+# unreadable_literal = "allow"
+pedantic = { level = "warn", priority = -1 }
 cargo_common_metadata = "warn"
-# multiple_crate_versions = "warn"
 negative_feature_names = "warn"
 redundant_feature_names = "warn"
-wildcard_dependencies = "deny"
 unwrap_used = "warn"
-
+ 
 [profile.release-lto]
 inherits = "release"
 lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
