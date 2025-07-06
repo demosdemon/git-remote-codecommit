@@ -5,10 +5,12 @@ use std::ops::Not;
 use uriparse::Host;
 use uriparse::RegisteredName;
 use uriparse::Scheme;
-use uriparse::Username;
 use uriparse::URI;
+use uriparse::Username;
 
 pub use self::error::ParseUriError;
+#[cfg(not(bool_to_result))]
+use crate::nightly::BoolExt;
 
 const SCHEME: &str = "codecommit";
 
@@ -142,20 +144,6 @@ trait SingleExt: IntoIterator {
 }
 
 impl<T: IntoIterator> SingleExt for T {}
-
-trait BoolExt {
-    fn ok_or<E>(self, or: E) -> Result<(), E>;
-}
-
-impl BoolExt for bool {
-    fn ok_or<E>(self, or: E) -> Result<(), E> {
-        if self {
-            Ok(())
-        } else {
-            Err(or)
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

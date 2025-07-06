@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
-use crate::TimestampExt;
 use crate::SERVICE;
+use crate::TimestampExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CredentialScope<'a> {

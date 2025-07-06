@@ -1,12 +1,12 @@
 use anyhow::Context;
-use aws_config::meta::region::ProvideRegion;
-use aws_config::meta::region::RegionProviderChain;
 use aws_config::AppName;
 use aws_config::BehaviorVersion;
 use aws_config::Region;
 use aws_config::SdkConfig;
-use aws_credential_types::provider::ProvideCredentials;
+use aws_config::meta::region::ProvideRegion;
+use aws_config::meta::region::RegionProviderChain;
 use aws_credential_types::Credentials;
+use aws_credential_types::provider::ProvideCredentials;
 
 const APP_NAME: &str = "git-remote-codecommit";
 

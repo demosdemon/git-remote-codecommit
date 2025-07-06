@@ -1,4 +1,5 @@
 #![cfg_attr(windows, feature(windows_process_exit_code_from))]
+#![cfg_attr(bool_to_result, feature(bool_to_result))]
 
 mod canonical_request;
 mod credential_scope;
@@ -6,6 +7,7 @@ mod datetime;
 mod hex;
 mod hostname;
 mod logging;
+mod nightly;
 mod sdk_context;
 mod string_to_sign;
 mod uri;
@@ -17,8 +19,8 @@ use std::time::SystemTime;
 
 use anyhow::Context;
 use clap::Parser;
-use hmac::digest::FixedOutput;
 use hmac::Mac;
+use hmac::digest::FixedOutput;
 use tracing::debug;
 use tracing::trace;
 
@@ -293,7 +295,10 @@ mod tests {
 
         let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
-        assert_eq!(url, "https://ANOTREAL:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
+        assert_eq!(
+            url,
+            "https://ANOTREAL:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo"
+        );
     }
 
     #[test]
@@ -317,7 +322,10 @@ mod tests {
             &sdk_context,
         );
 
-        assert_eq!(url, "https://ANOTREAL:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");
+        assert_eq!(
+            url,
+            "https://ANOTREAL:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo"
+        );
     }
 
     #[test]
@@ -336,7 +344,10 @@ mod tests {
 
         let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
-        assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo");
+        assert_eq!(
+            url,
+            "https://ANOTREAL%25notarealsessiontoken:19700101T000000Zf840ae3ff903ddb92c450d0e3567fe97ef4aa98bd6636905df48c3beee97d21d@git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo"
+        );
     }
 
     #[test]
@@ -360,6 +371,9 @@ mod tests {
             &sdk_context,
         );
 
-        assert_eq!(url, "https://ANOTREAL%25notarealsessiontoken:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo");
+        assert_eq!(
+            url,
+            "https://ANOTREAL%25notarealsessiontoken:19700101T000000Za305b3ce69941e8f0773a2257d9059df41dfc3a4d2563a42948e84ec4825ec06@localhost:8443/v1/repos/my-repo"
+        );
     }
 }
