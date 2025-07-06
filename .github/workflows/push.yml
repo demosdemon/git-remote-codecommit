@@ -29,7 +29,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
-          role-session-name: ${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Install Rust
