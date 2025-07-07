@@ -249,6 +249,7 @@ jobs:
           compression-level: 0
 
   push-to-codecommit:
+    concurrency: push-to-codecommit
     name: Push to CodeCommit
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
     needs: [finalize-coveralls-run, build-docs, build-binaries]
