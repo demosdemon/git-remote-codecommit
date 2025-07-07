@@ -8,7 +8,9 @@
 //! very new but replaces the manually implemented `BoolExt` trait.
 
 use std::ffi::OsString;
+#[cfg(feature = "debug-probe")]
 use std::fmt;
+#[cfg(feature = "debug-probe")]
 use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
@@ -125,7 +127,9 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
         }
     }
 
+    #[cfg(feature = "debug-probe")]
     let debug = rustc_probe_debug();
+    #[cfg(feature = "debug-probe")]
     if debug {
         let mut msg = String::new();
         write_command(&mut msg, &cmd).expect("write to string does not fail");
@@ -141,9 +145,13 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
     // Clean up to avoid leaving nondeterministic absolute paths in the dep-info
     // file in OUT_DIR, which causes nonreproducible builds in build systems
     // that treat the entire OUT_DIR as an artifact.
+    #[cfg(feature = "debug-probe")]
     if !debug {
         rmrf(&out_subdir);
     }
+
+    #[cfg(not(feature = "debug-probe"))]
+    rmrf(&out_subdir);
 
     success
 }
@@ -198,6 +206,7 @@ fn rustc_command() -> Command {
     }
 }
 
+#[cfg(feature = "debug-probe")]
 fn rustc_probe_debug() -> bool {
     fn is_falsy(mut s: OsString) -> bool {
         if s.len() <= 5 {
@@ -216,6 +225,7 @@ fn rustc_probe_debug() -> bool {
     }
 }
 
+#[cfg(feature = "debug-probe")]
 fn write_command(out: &mut impl Write, cmd: &Command) -> fmt::Result {
     writeln!(out, "Running RUSTC command:")?;
     if let Some(cwd) = cmd.get_current_dir() {
