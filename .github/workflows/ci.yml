@@ -251,7 +251,6 @@ jobs:
   push-to-codecommit:
     concurrency: push-to-codecommit
     name: Push to CodeCommit
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
     needs: [finalize-coveralls-run, build-docs, build-binaries]
     runs-on: ubuntu-latest
     env:
@@ -263,25 +262,30 @@ jobs:
         with:
           fetch-depth: 0 # need the history in order to push to CodeCommit
 
-      - name: configure aws credentials
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Download git-remote-codecommit
+        uses: actions/download-artifact@v4
+        with:
+          name: git-remote-codecommit-ubuntu-latest
+          path: target/release-lto
 
-      - name: Fetch cargo dependencies
-        run: cargo v --locked
+      - name: Make git-remote-codecommit executable
+        run: chmod +x target/release-lto/git-remote-codecommit
 
-      - name: Install git-remote-codecommit
-        run: cargo v-install --frozen --profile=release-lto --path=crates/git-remote-codecommit
+      - name: Add git-remote-codecommit to PATH
+        run: echo "$PWD/target/release-lto" >> $GITHUB_PATH
 
       - name: Check version
         run: git-remote-codecommit --version
 
       - name: Push to CodeCommit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
         run: |
           git remote add aws codecommit://git-remote-codecommit
           git push aws HEAD:refs/heads/main
