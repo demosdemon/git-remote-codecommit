@@ -1,3 +1,12 @@
+// Largely lifted from https://github.com/dtolnay/anyhow/blob/1d7ef1db5414ac155ad6254685673c90ea4c7d77/build.rs
+// under the Apache License, Version 2.0 or the MIT License, same as this crate.
+
+//! Probes the compiler to determine whether it supports specific unstable
+//! features and enables them if so.
+//!
+//! This is currently used to check if `bool_to_result` is available, which is
+//! very new but replaces the manually implemented `BoolExt` trait.
+
 use std::ffi::OsString;
 use std::fmt;
 use std::fmt::Write;
@@ -16,10 +25,9 @@ macro_rules! die {
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(build_feature_probe)");
     println!("cargo:rustc-check-cfg=cfg(bool_to_result)");
-
-    let bool_to_result;
     println!("cargo:rerun-if-changed=src/nightly.rs");
 
+    let bool_to_result;
     let consider_rustc_bootstrap;
     if compile_probe(false) {
         // This is a nightly or dev compiler, so it supports unstable
@@ -49,8 +57,8 @@ fn main() {
         }
     } else {
         // Without RUSTC_BOOTSTRAP, this compiler does not support the
-        // generic member access API in the form that anyhow expects, but
-        // try again if the user turns on unstable features.
+        // unstable features this crate uses, but try again if the user turns on
+        // unstable features.
         bool_to_result = false;
         consider_rustc_bootstrap = true;
     }
