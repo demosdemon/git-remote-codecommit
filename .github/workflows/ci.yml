@@ -1,6 +1,10 @@
 name: ci
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
   RUST_BACKTRACE: 1
 
@@ -94,6 +98,7 @@ jobs:
         os:
           - ubuntu-latest
         rust:
+          - stable
           - nightly
     runs-on: ${{ matrix.os }}
     steps:
@@ -112,24 +117,49 @@ jobs:
 
       - name: Run Rust tests with coverage
         run: .github/scripts/collect-coverage.sh
+        env:
+          RUSTC_PROBE_KEEP_PROBE: ${{ matrix.rust == 'nightly' && '1' || '0'}}
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4.0.1
+      - name: Upload out if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/debug/coverage/lcov
-          flags: unittests
+          name: coverage-failure-${{ matrix.rust }}-${{ matrix.os }}
+          path: target/debug/build/git-remote-codecommit-*
+          retention-days: 1
 
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}
           path: target/debug/coverage/html/
+          retention-days: 7
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: target/debug/coverage/lcov
+          flags: unittests
+          use_oidc: true
 
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@v2
         with:
           files: target/debug/coverage/lcov
+          flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}
+          parallel: true
+
+  finalize-coveralls-run:
+    name: Finalize Coveralls Run
+    needs: [coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize Coveralls Run
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
+          carryforward: code-coverage-report-stable-ubuntu-latest,code-coverage-report-nightly-ubuntu-latest
 
   build-docs:
     name: Build Documentation
@@ -217,3 +247,40 @@ jobs:
             target/release-lto/git-remote-codecommit
             target/release-lto/git-remote-codecommit.exe
           compression-level: 0
+
+  push-to-codecommit:
+    name: Push to CodeCommit
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
+    needs: [finalize-coveralls-run, build-docs, build-binaries]
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
+      AWS_REGION: us-west-2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the history in order to push to CodeCommit
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Fetch cargo dependencies
+        run: cargo v --locked
+
+      - name: Install git-remote-codecommit
+        run: cargo v-install --frozen --profile=release-lto --path=crates/git-remote-codecommit
+
+      - name: Check version
+        run: git-remote-codecommit --version
+
+      - name: Push to CodeCommit
+        run: |
+          git remote add aws codecommit://git-remote-codecommit
+          git push aws HEAD:refs/heads/main
