@@ -155,6 +155,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Finalize Coveralls Run
         uses: coverallsapp/github-action@v2
         with:
