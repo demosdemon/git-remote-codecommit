@@ -1,4 +1,4 @@
-#![cfg_attr(not(bool_to_result), expect(unstable_name_collisions))]
+#![cfg_attr(not(bool_to_result), allow(unstable_name_collisions))]
 
 mod error;
 
