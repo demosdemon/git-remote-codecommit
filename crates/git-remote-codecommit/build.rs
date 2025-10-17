@@ -8,10 +8,6 @@
 //! very new but replaces the manually implemented `BoolExt` trait.
 
 use std::ffi::OsString;
-#[cfg(feature = "debug-probe")]
-use std::fmt;
-#[cfg(feature = "debug-probe")]
-use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Path;
@@ -127,30 +123,11 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
         }
     }
 
-    #[cfg(feature = "debug-probe")]
-    let debug = rustc_probe_debug();
-    #[cfg(feature = "debug-probe")]
-    if debug {
-        let mut msg = String::new();
-        write_command(&mut msg, &cmd).expect("write to string does not fail");
-        std::fs::write(out_subdir.join("probe-command"), msg)
-            .unwrap_or_else(|err| die!("failed to write probe command: {err}"));
-    }
-
     let success = match cmd.status() {
         Ok(status) => status.success(),
         Err(_) => false,
     };
 
-    // Clean up to avoid leaving nondeterministic absolute paths in the dep-info
-    // file in OUT_DIR, which causes nonreproducible builds in build systems
-    // that treat the entire OUT_DIR as an artifact.
-    #[cfg(feature = "debug-probe")]
-    if !debug {
-        rmrf(&out_subdir);
-    }
-
-    #[cfg(not(feature = "debug-probe"))]
     rmrf(&out_subdir);
 
     success
@@ -204,68 +181,4 @@ fn rustc_command() -> Command {
     } else {
         Command::new(path)
     }
-}
-
-#[cfg(feature = "debug-probe")]
-fn rustc_probe_debug() -> bool {
-    fn is_falsy(mut s: OsString) -> bool {
-        if s.len() <= 5 {
-            s.make_ascii_lowercase();
-            s.is_empty() || s == "0" || s == "false" || s == "no" || s == "off"
-        } else {
-            // otherwise it's too long to be a falsy value and a waste to lowercase
-            false
-        }
-    }
-
-    println!("cargo:rerun-if-env-changed=RUSTC_PROBE_KEEP_PROBE");
-    match std::env::var_os("RUSTC_PROBE_KEEP_PROBE") {
-        Some(v) => !is_falsy(v),
-        None => false,
-    }
-}
-
-#[cfg(feature = "debug-probe")]
-fn write_command(out: &mut impl Write, cmd: &Command) -> fmt::Result {
-    writeln!(out, "Running RUSTC command:")?;
-    if let Some(cwd) = cmd.get_current_dir() {
-        writeln!(out, "  cwd : {}", cwd.display())?;
-    } else if let Ok(cwd) = std::env::current_dir() {
-        writeln!(out, "  cwd : {}", cwd.display())?;
-    } else {
-        writeln!(out, "  cwd : <unknown>")?;
-    }
-
-    writeln!(out, "  prog: {}", cmd.get_program().display())?;
-
-    let mut args = cmd.get_args();
-    if let Some(arg) = args.next() {
-        writeln!(out, "  args: - {}", arg.display())?;
-        for arg in args {
-            writeln!(out, "        - {}", arg.display())?;
-        }
-    } else {
-        writeln!(out, "  args: <none>")?;
-    }
-
-    let mut envs = cmd.get_envs();
-    if let Some((env, opt)) = envs.next() {
-        if let Some(value) = opt {
-            writeln!(out, "  env : {}={}", env.display(), value.display())?;
-        } else {
-            writeln!(out, "  env : {}=<removed>", env.display())?;
-        }
-
-        for (env, opt) in envs {
-            if let Some(value) = opt {
-                writeln!(out, "        {}={}", env.display(), value.display())?;
-            } else {
-                writeln!(out, "        {}=<removed>", env.display())?;
-            }
-        }
-    } else {
-        writeln!(out, "  env : <none>")?;
-    }
-
-    Ok(())
 }
