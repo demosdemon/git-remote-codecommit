@@ -263,7 +263,7 @@ mod tests {
 
     async fn load_test_sdk_config() -> SdkConfig {
         aws_config::ConfigLoader::default()
-            .behavior_version(BehaviorVersion::v2025_01_17())
+            .behavior_version(BehaviorVersion::latest())
             .region("us-east-1")
             .credentials_provider(Credentials::for_tests())
             .load()
@@ -272,7 +272,7 @@ mod tests {
 
     async fn load_test_sdk_config_with_session_token() -> SdkConfig {
         aws_config::ConfigLoader::default()
-            .behavior_version(BehaviorVersion::v2025_01_17())
+            .behavior_version(BehaviorVersion::latest())
             .region("us-east-1")
             .credentials_provider(Credentials::for_tests_with_session_token())
             .load()
