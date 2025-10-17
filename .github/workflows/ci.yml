@@ -290,4 +290,5 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
         run: |
           git remote add aws codecommit://git-remote-codecommit
+          git push aws --tags
           git push aws HEAD:refs/heads/main
