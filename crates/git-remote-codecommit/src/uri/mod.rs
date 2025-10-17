@@ -1,3 +1,5 @@
+#![cfg_attr(not(bool_to_result), expect(unstable_name_collisions))]
+
 mod error;
 
 use std::ops::Not;
