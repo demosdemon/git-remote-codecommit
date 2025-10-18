@@ -41,21 +41,40 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
+          # - windows-latest
         rust:
+          - "1.86"
+          - "1.87"
+          - "1.88"
+          - "1.89"
+          - "1.90"
           - stable
           - beta
           - nightly
+        rustc_bootstrap:
+          - "0"
+          - "1"
         exclude:
+          # bootstrap is only relevant for non-nightly toolchains
+          - os: ubuntu-latest
+            rust: nightly
+            rustc_bootstrap: "0"
+          - os: macos-latest
+            rust: nightly
+            rustc_bootstrap: "0"
+          # - os: windows-latest
+          #   rust: nightly
+          #   rustc_bootstrap: "0"
+        include:
           # Windows builds depend on an unstable feature: windows_process_exit_code_from
           # TODO: find a better way to handle this for windows without nightly
           - os: windows-latest
-            rust: stable
-          - os: windows-latest
-            rust: beta
+            rust: nightly
+            rustc_bootstrap: "1"
     runs-on: ${{ matrix.os }}
     env:
       RUSTFLAGS: "-D warnings"
+      RUSTC_BOOTSTRAP: ${{ matrix.rustc_bootstrap }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,8 +83,11 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: clippy
-          cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
+          components: clippy,llvm-tools-preview
+          cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
+
+      - name: Install grcov
+        run: cargo install grcov --locked
 
       - name: Fetch cargo dependencies
         run: cargo fetch --verbose --locked
@@ -90,48 +112,41 @@ jobs:
       - name: Run Tests (all features)
         run: cargo test --verbose --workspace --all-features --frozen
 
-  coverage:
-    name: Run tests with coverage
-    needs: [check-and-test]
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-        rust:
-          - stable
-          - nightly
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Rust (${{ matrix.rust }})
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          components: llvm-tools-preview
-          cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
-
-      - name: Install grcov
-        run: cargo install grcov
-
       - name: Run Rust tests with coverage
-        run: .github/scripts/collect-coverage.sh
         env:
-          RUSTC_PROBE_KEEP_PROBE: ${{ matrix.rust == 'nightly' && '1' || '0'}}
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-Cinstrument-coverage"
+        shell: bash
+        run: |
+          cargo build --verbose --workspace --tests --frozen
+          export LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw'
+          cargo test --verbose --workspace --frozen
+          mkdir -p ./target/debug/coverage/
+          grcov . \
+            --source-dir . \
+            --binary-path ./target/debug/ \
+            --output-types lcov,html \
+            --llvm \
+            --branch \
+            --keep-only 'crates/**' \
+            --ignore-not-existing \
+            --excl-line 'grcov-excl-line|#\[derive\(|ensure!\(|assert!\(|/!|///' \
+            --excl-start 'grcov-excl-start' \
+            --excl-stop 'grcov-excl-stop' \
+            --output-path ./target/debug/coverage/
 
       - name: Upload out if failed
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-failure-${{ matrix.rust }}-${{ matrix.os }}
+          name: coverage-failure-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           path: target/debug/build/git-remote-codecommit-*
           retention-days: 1
 
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}
+          name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           path: target/debug/coverage/html/
           retention-days: 7
 
@@ -146,22 +161,28 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           files: target/debug/coverage/lcov
-          flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}
+          flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           parallel: true
 
   finalize-coveralls-run:
     name: Finalize Coveralls Run
-    needs: [coverage]
+    needs: [check-and-test]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set carryforward
+        id: set_carryforward
+        run: |
+          echo "carryforward<<EOF" >> $GITHUB_OUTPUT
+          python3 .github/scripts/matrix.py >> $GITHUB_OUTPUT
+          echo EOF >> $GITHUB_OUTPUT
       - name: Finalize Coveralls Run
         uses: coverallsapp/github-action@v2
         with:
           parallel-finished: true
-          carryforward: code-coverage-report-stable-ubuntu-latest,code-coverage-report-nightly-ubuntu-latest
+          carryforward: ${{ steps.set_carryforward.outputs.carryforward }}
 
   build-docs:
     name: Build Documentation
