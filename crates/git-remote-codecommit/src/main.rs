@@ -145,17 +145,30 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
 
 #[cfg(windows)]
 fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
+    #![expect(unsafe_code)]
+    use windows_sys::Win32::Foundation::FALSE;
+    use windows_sys::Win32::Foundation::TRUE;
+    use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
+    use windows_sys::core::BOOL;
+
     use crate::nightly::ExitCodeExt;
+
+    unsafe extern "system" fn ctrlc_handler(_: u32) -> BOOL {
+        // Do nothing; let the child process handle it.
+        TRUE
+    }
 
     // windows and other non-unix platforms don't support `execvp`, so we can't
     // replace the current process. Instead, we need to spawn a new process and
     // set up the pipes.
 
-    // We setup a ctrlc handler and ignore it because on windows, this signal is
-    // sent to all processes attached to the console, including the parent
-    // process. Therefore, by ignoring the ctrl-c, we let the child handle the
-    // signal and exit. We can reap the process normally.
-    ctrlc::set_handler(|| {}).context("failed to set ctrl-c handler")?;
+    // SAFETY: We setup a ctrlc handler and ignore it because on windows, this
+    // signal is sent to all processes attached to the console, including the
+    // parent process. Therefore, by ignoring the ctrl-c, we let the child
+    // handle the signal and exit. We can reap the process normally.
+    if unsafe { SetConsoleCtrlHandler(Some(ctrlc_handler), TRUE) } == FALSE {
+        anyhow::bail!("failed to set ctrl-c handler");
+    }
 
     let exit = cmd
         .spawn()
