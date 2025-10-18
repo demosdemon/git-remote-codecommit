@@ -178,7 +178,7 @@ jobs:
             --branch \
             --keep-only 'crates/**' \
             --ignore-not-existing \
-            --excl-line 'grcov-excl-line|#\[derive\(|ensure!\(|assert!\(|/!|///' \
+            --excl-line 'grcov-excl-line|unreachable!|unreachable_unchecked()|#\[derive\(|ensure!\(|assert!\(|/!|///' \
             --excl-start 'grcov-excl-start' \
             --excl-stop 'grcov-excl-stop' \
             --output-path ./target/debug/coverage/
