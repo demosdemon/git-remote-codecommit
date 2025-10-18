@@ -41,7 +41,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-          # - windows-latest
+          - windows-latest
         rust:
           - "1.86"
           - "1.87"
@@ -62,15 +62,9 @@ jobs:
           - os: macos-latest
             rust: nightly
             rustc_bootstrap: "0"
-          # - os: windows-latest
-          #   rust: nightly
-          #   rustc_bootstrap: "0"
-        include:
-          # Windows builds depend on an unstable feature: windows_process_exit_code_from
-          # TODO: find a better way to handle this for windows without nightly
           - os: windows-latest
             rust: nightly
-            rustc_bootstrap: "1"
+            rustc_bootstrap: "0"
     runs-on: ${{ matrix.os }}
     env:
       RUSTFLAGS: "-D warnings"

@@ -1,4 +1,7 @@
-#![cfg_attr(windows, feature(windows_process_exit_code_from))]
+#![cfg_attr(
+    windows_process_exit_code_from,
+    feature(windows_process_exit_code_from)
+)]
 #![cfg_attr(bool_to_result, feature(bool_to_result))]
 
 mod canonical_request;
@@ -142,7 +145,7 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
 
 #[cfg(windows)]
 fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
-    use std::os::windows::process::ExitCodeExt;
+    use crate::nightly::ExitCodeExt;
 
     // windows and other non-unix platforms don't support `execvp`, so we can't
     // replace the current process. Instead, we need to spawn a new process and

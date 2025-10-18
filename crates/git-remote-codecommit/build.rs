@@ -23,54 +23,75 @@ macro_rules! die {
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(build_feature_probe)");
     println!("cargo:rustc-check-cfg=cfg(bool_to_result)");
-    println!("cargo:rerun-if-changed=src/nightly.rs");
+    println!("cargo:rustc-check-cfg=cfg(windows_process_exit_code_from)");
+    println!("cargo:rerun-if-changed=src/nightly/mod.rs");
+    println!("cargo:rerun-if-changed=src/nightly/bool_or.rs");
+    println!("cargo:rerun-if-changed=src/nightly/windows_process_exit_code.rs");
 
-    let bool_to_result;
-    let consider_rustc_bootstrap;
-    if compile_probe(false) {
-        // This is a nightly or dev compiler, so it supports unstable
-        // features regardless of RUSTC_BOOTSTRAP. No need to rerun build
-        // script if RUSTC_BOOTSTRAP is changed.
-        bool_to_result = true;
-        consider_rustc_bootstrap = false;
-    } else if let Some(rustc_bootstrap) = std::env::var_os("RUSTC_BOOTSTRAP") {
-        if compile_probe(true) {
-            // This is a stable or beta compiler for which the user has set
-            // RUSTC_BOOTSTRAP to turn on unstable features. Rerun build
-            // script if they change it.
-            bool_to_result = true;
-            consider_rustc_bootstrap = true;
-        } else if rustc_bootstrap == "1" {
-            // This compiler does not support the generic member access API
-            // in the form that anyhow expects. No need to pay attention to
-            // RUSTC_BOOTSTRAP.
-            bool_to_result = false;
-            consider_rustc_bootstrap = false;
-        } else {
-            // This is a stable or beta compiler for which RUSTC_BOOTSTRAP
-            // is set to restrict the use of unstable features by this
-            // crate.
-            bool_to_result = false;
-            consider_rustc_bootstrap = true;
-        }
-    } else {
-        // Without RUSTC_BOOTSTRAP, this compiler does not support the
-        // unstable features this crate uses, but try again if the user turns on
-        // unstable features.
-        bool_to_result = false;
-        consider_rustc_bootstrap = true;
-    }
+    let CompilerProbeResult {
+        supported: bool_to_result,
+        consider_rustc_bootstrap,
+    } = compiler_probe("bool_or.rs");
 
     if bool_to_result {
         println!("cargo:rustc-cfg=bool_to_result");
     }
+
+    #[cfg(windows)]
+    let consider_rustc_bootstrap = {
+        let CompilerProbeResult {
+            supported,
+            consider_rustc_bootstrap: consider_rustc_bootstrap_windows,
+        } = compiler_probe("windows_process_exit_code.rs");
+        if supported {
+            println!("cargo:rustc-cfg=windows_process_exit_code_from");
+        }
+
+        consider_rustc_bootstrap || consider_rustc_bootstrap_windows
+    };
 
     if consider_rustc_bootstrap {
         println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
     }
 }
 
-fn compile_probe(rustc_bootstrap: bool) -> bool {
+struct CompilerProbeResult {
+    supported: bool,
+    consider_rustc_bootstrap: bool,
+}
+
+fn compiler_probe(filename: impl AsRef<Path>) -> CompilerProbeResult {
+    if compile_probe(&filename, false) {
+        CompilerProbeResult {
+            supported: true,
+            consider_rustc_bootstrap: false,
+        }
+    } else if let Some(rustc_bootstrap) = std::env::var_os("RUSTC_BOOTSTRAP") {
+        if compile_probe("bool_or.rs", true) {
+            CompilerProbeResult {
+                supported: true,
+                consider_rustc_bootstrap: true,
+            }
+        } else if rustc_bootstrap == "1" {
+            CompilerProbeResult {
+                supported: false,
+                consider_rustc_bootstrap: false,
+            }
+        } else {
+            CompilerProbeResult {
+                supported: false,
+                consider_rustc_bootstrap: true,
+            }
+        }
+    } else {
+        CompilerProbeResult {
+            supported: false,
+            consider_rustc_bootstrap: true,
+        }
+    }
+}
+
+fn compile_probe(filename: impl AsRef<Path>, rustc_bootstrap: bool) -> bool {
     if std::env::var_os("RUSTC_STAGE").is_some() {
         println!("cargo:rerun-if-env-changed=RUSTC_STAGE");
         // We are running inside rustc bootstrap. This is a highly non-standard
@@ -89,7 +110,7 @@ fn compile_probe(rustc_bootstrap: bool) -> bool {
     let out_subdir = Path::new(&out_dir).join(probe_dir);
     mkdir(&out_subdir);
 
-    let probefile = Path::new("src").join("nightly.rs");
+    let probefile = Path::new("src").join("nightly").join(filename);
 
     let mut cmd = rustc_command();
 
