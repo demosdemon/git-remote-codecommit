@@ -106,14 +106,52 @@ jobs:
       - name: Run Tests (all features)
         run: cargo test --verbose --workspace --all-features --frozen
 
+      - name: Build Binaries
+        if: matrix.rust == 'nightly'
+        run: cargo build --verbose --bins --workspace --frozen --profile=release-lto
+
+      - name: Print diagnostics
+        if: matrix.rust == 'nightly' && runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path .\target\release-lto
+
+      - name: Print diagnostics
+        if: matrix.rust == 'nightly' && runner.os != 'Windows'
+        run: |
+          ls -Al ./target/release-lto
+
+      - name: Upload Binaries as GitHub artifact
+        if: matrix.rust == 'nightly'
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: git-remote-codecommit-${{ matrix.os }}
+          path: |
+            target/release-lto/git-remote-codecommit
+            target/release-lto/git-remote-codecommit.exe
+          compression-level: 0
+
+      - name: Configure AWS credentials
+        if: github.repository == 'demosdemon/git-remote-codecommit'
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        env:
+          RUST_BACKTRACE: 1
+          AWS_REGION: us-west-2
+        with:
+          role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Run Rust tests with coverage
         env:
           CARGO_INCREMENTAL: 0
           RUSTFLAGS: "-Cinstrument-coverage"
         shell: bash
         run: |
-          cargo build --verbose --workspace --tests --frozen
+          cargo build --verbose --workspace --all-targets --frozen
           export LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw'
+          export PATH="$PWD/target/debug:$PATH"
+          git remote add aws codecommit://git-remote-codecommit
+          git fetch aws main --depth=1 || true # if this is a fork the credentials won't be set
           cargo test --verbose --workspace --frozen
           mkdir -p ./target/debug/coverage/
           grcov . \
@@ -157,31 +195,6 @@ jobs:
           files: target/debug/coverage/lcov
           flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           parallel: true
-
-      - name: Build Binaries
-        if: matrix.rust == 'nightly'
-        run: cargo build --verbose --bins --workspace --frozen --profile=release-lto
-
-      - name: Print diagnostics
-        if: matrix.rust == 'nightly' && runner.os == 'Windows'
-        shell: powershell
-        run: |
-          Get-ChildItem -Path .\target\release-lto
-
-      - name: Print diagnostics
-        if: matrix.rust == 'nightly' && runner.os != 'Windows'
-        run: |
-          ls -Al ./target/release-lto
-
-      - name: Upload Binaries as GitHub artifact
-        if: matrix.rust == 'nightly'
-        uses: actions/upload-artifact@v4.6.0
-        with:
-          name: git-remote-codecommit-${{ matrix.os }}
-          path: |
-            target/release-lto/git-remote-codecommit
-            target/release-lto/git-remote-codecommit.exe
-          compression-level: 0
 
   finalize-coveralls-run:
     name: Finalize Coveralls Run
