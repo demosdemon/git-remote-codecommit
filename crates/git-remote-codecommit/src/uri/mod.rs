@@ -26,7 +26,7 @@ pub struct ParsedUri<'a> {
     repository: RegisteredName<'a>,
 }
 
-impl ParsedUri<'_> {
+impl<'a> ParsedUri<'a> {
     pub fn region(&self) -> Option<&str> {
         self.region.as_ref().map(Scheme::as_str)
     }
@@ -47,20 +47,8 @@ impl ParsedUri<'_> {
             repository: self.repository.into_owned(),
         }
     }
-}
 
-impl<'a> TryFrom<&'a String> for ParsedUri<'a> {
-    type Error = ParseUriError;
-
-    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
-    }
-}
-
-impl<'a> TryFrom<&'a str> for ParsedUri<'a> {
-    type Error = ParseUriError;
-
-    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+    pub fn new(input: &'a str) -> Result<Self, ParseUriError> {
         // Git removes this prefix before invoking the helper; but, we're checking for
         // it anyways to be safe as otherwise it would be an invalid URI.
         let value = input.strip_prefix(PREFIX_WITH_REGION).unwrap_or(input);
@@ -136,12 +124,7 @@ trait SingleExt: IntoIterator {
     {
         let mut iter = self.into_iter();
         let first = iter.next()?;
-        // note: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/temporary-tail-expr-scope.html
-        if iter.next().is_none() {
-            Some(first)
-        } else {
-            None
-        }
+        iter.next().is_none().then_some(first)
     }
 }
 
@@ -153,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_base_example() {
-        let parsed_uri = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("codecommit://my-repo").expect("valid URI");
         assert_eq!(None, parsed_uri.region());
         assert_eq!(None, parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -161,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_base_example_with_profile() {
-        let parsed_uri = ParsedUri::try_from("codecommit://my-profile@my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("codecommit://my-profile@my-repo").expect("valid URI");
         assert_eq!(None, parsed_uri.region());
         assert_eq!(Some("my-profile"), parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -169,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_region_example() {
-        let parsed_uri = ParsedUri::try_from("codecommit::us-east-1://my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("codecommit::us-east-1://my-repo").expect("valid URI");
         assert_eq!(Some("us-east-1"), parsed_uri.region());
         assert_eq!(None, parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -178,7 +161,7 @@ mod tests {
     #[test]
     fn test_region_example_with_profile() {
         let parsed_uri =
-            ParsedUri::try_from("codecommit::us-east-1://my-profile@my-repo").expect("valid URI");
+            ParsedUri::new("codecommit::us-east-1://my-profile@my-repo").expect("valid URI");
         assert_eq!(Some("us-east-1"), parsed_uri.region());
         assert_eq!(Some("my-profile"), parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -186,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_region_from_git_example() {
-        let parsed_uri = ParsedUri::try_from("us-east-1://my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("us-east-1://my-repo").expect("valid URI");
         assert_eq!(Some("us-east-1"), parsed_uri.region());
         assert_eq!(None, parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -194,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_region_from_git_example_with_profile() {
-        let parsed_uri = ParsedUri::try_from("us-east-1://my-profile@my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("us-east-1://my-profile@my-repo").expect("valid URI");
         assert_eq!(Some("us-east-1"), parsed_uri.region());
         assert_eq!(Some("my-profile"), parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -203,7 +186,7 @@ mod tests {
     #[test]
     fn test_invalid_uri() {
         assert!(matches!(
-            ParsedUri::try_from("codecommit::my-repo"),
+            ParsedUri::new("codecommit::my-repo"),
             Err(ParseUriError::InvalidUri(_))
         ));
     }
@@ -212,7 +195,7 @@ mod tests {
     fn test_missing_authority() {
         assert_eq!(
             Err(ParseUriError::MissingAuthority),
-            ParsedUri::try_from("codecommit:"),
+            ParsedUri::new("codecommit:"),
         );
     }
 
@@ -220,7 +203,7 @@ mod tests {
     fn test_unexpected_path() {
         assert_eq!(
             Err(ParseUriError::UnexpectedPath),
-            ParsedUri::try_from("codecommit:///my-repo"),
+            ParsedUri::new("codecommit:///my-repo"),
         );
     }
 
@@ -228,7 +211,7 @@ mod tests {
     fn test_unexpected_query() {
         assert_eq!(
             Err(ParseUriError::UnexpectedQuery),
-            ParsedUri::try_from("codecommit://my-repo?query"),
+            ParsedUri::new("codecommit://my-repo?query"),
         );
     }
 
@@ -236,7 +219,7 @@ mod tests {
     fn test_unexpected_fragment() {
         assert_eq!(
             Err(ParseUriError::UnexpectedFragment),
-            ParsedUri::try_from("codecommit://my-repo#fragment"),
+            ParsedUri::new("codecommit://my-repo#fragment"),
         );
     }
 
@@ -244,7 +227,7 @@ mod tests {
     fn test_unexpected_password() {
         assert_eq!(
             Err(ParseUriError::UnexpectedPassword),
-            ParsedUri::try_from("codecommit://user:pass@my-repo"),
+            ParsedUri::new("codecommit://user:pass@my-repo"),
         );
     }
 
@@ -252,7 +235,7 @@ mod tests {
     fn test_unexpected_port() {
         assert_eq!(
             Err(ParseUriError::UnexpectedPort),
-            ParsedUri::try_from("codecommit://my-repo:1234"),
+            ParsedUri::new("codecommit://my-repo:1234"),
         );
     }
 
@@ -260,7 +243,7 @@ mod tests {
     fn test_unexpected_ipv4_for_repo() {
         assert_eq!(
             Err(ParseUriError::UnexpectedIpForRepositoryName),
-            ParsedUri::try_from("codecommit://127.0.0.1"),
+            ParsedUri::new("codecommit://127.0.0.1"),
         );
     }
 
@@ -268,7 +251,7 @@ mod tests {
     fn test_unexpected_ipv6_for_repo() {
         assert_eq!(
             Err(ParseUriError::UnexpectedIpForRepositoryName),
-            ParsedUri::try_from("codecommit://[::1]"),
+            ParsedUri::new("codecommit://[::1]"),
         );
     }
 
@@ -276,13 +259,13 @@ mod tests {
     fn test_empty_repo_name() {
         assert_eq!(
             Err(ParseUriError::EmptyRepositoryName),
-            ParsedUri::try_from("codecommit://"),
+            ParsedUri::new("codecommit://"),
         );
     }
 
     #[test]
     fn test_to_owned() {
-        let parsed_uri = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_uri = ParsedUri::new("codecommit://my-repo").expect("valid URI");
         let owned = parsed_uri.into_owned();
         assert_eq!(None, owned.region());
         assert_eq!(None, owned.profile());
@@ -292,7 +275,7 @@ mod tests {
     #[test]
     fn test_try_from_owned() {
         let s = "codecommit://my-repo".to_owned();
-        let parsed_uri = ParsedUri::try_from(&s).expect("valid URI");
+        let parsed_uri = ParsedUri::new(&s).expect("valid URI");
         assert_eq!(None, parsed_uri.region());
         assert_eq!(None, parsed_uri.profile());
         assert_eq!("my-repo", parsed_uri.repository());
@@ -300,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        let parsed_uri = ParsedUri::try_from("codecommit://my-repo")
+        let parsed_uri = ParsedUri::new("codecommit://my-repo")
             .expect("valid URI")
             .to_string();
         assert_eq!("codecommit://my-repo", parsed_uri);
@@ -308,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_to_string_with_profile() {
-        let parsed_uri = ParsedUri::try_from("codecommit://my-profile@my-repo")
+        let parsed_uri = ParsedUri::new("codecommit://my-profile@my-repo")
             .expect("valid URI")
             .to_string();
         assert_eq!("codecommit://my-profile@my-repo", parsed_uri);
@@ -316,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_to_string_with_region() {
-        let parsed_uri = ParsedUri::try_from("codecommit::us-west-2://my-repo")
+        let parsed_uri = ParsedUri::new("codecommit::us-west-2://my-repo")
             .expect("valid URI")
             .to_string();
         assert_eq!("codecommit::us-west-2://my-repo", parsed_uri);
@@ -324,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_to_string_with_profile_and_region() {
-        let parsed_uri = ParsedUri::try_from("codecommit::us-west-2://my-profile@my-repo")
+        let parsed_uri = ParsedUri::new("codecommit::us-west-2://my-profile@my-repo")
             .expect("valid URI")
             .to_string();
         assert_eq!("codecommit::us-west-2://my-profile@my-repo", parsed_uri);

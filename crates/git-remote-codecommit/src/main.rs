@@ -110,7 +110,7 @@ fn main() -> anyhow::Result<ExitCode> {
         "parsed cli arguments"
     );
 
-    let parsed_uri = ParsedUri::try_from(&remote_uri).context("failed to parse uri")?;
+    let parsed_uri = ParsedUri::new(&remote_uri).context("failed to parse uri")?;
     debug!(?parsed_uri, "parsed uri");
 
     let sdk_context = SdkContext::load_context_sync(parsed_uri.region(), parsed_uri.profile())?;
@@ -307,7 +307,7 @@ mod tests {
             })
             .expect("failed to load context");
 
-        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_url = ParsedUri::new("codecommit://my-repo").expect("valid URI");
 
         let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
@@ -329,7 +329,7 @@ mod tests {
             })
             .expect("failed to load context");
 
-        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_url = ParsedUri::new("codecommit://my-repo").expect("valid URI");
 
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
@@ -356,7 +356,7 @@ mod tests {
             })
             .expect("failed to load context");
 
-        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_url = ParsedUri::new("codecommit://my-repo").expect("valid URI");
 
         let url = generate_url(SystemTime::UNIX_EPOCH, &parsed_url, None, &sdk_context);
 
@@ -378,7 +378,7 @@ mod tests {
             })
             .expect("failed to load context");
 
-        let parsed_url = ParsedUri::try_from("codecommit://my-repo").expect("valid URI");
+        let parsed_url = ParsedUri::new("codecommit://my-repo").expect("valid URI");
 
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
