@@ -158,6 +158,31 @@ jobs:
           flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           parallel: true
 
+      - name: Build Binaries
+        if: matrix.rust == 'nightly'
+        run: cargo build --verbose --bins --workspace --frozen --profile=release-lto
+
+      - name: Print diagnostics
+        if: matrix.rust == 'nightly' && runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path .\target\release-lto
+
+      - name: Print diagnostics
+        if: matrix.rust == 'nightly' && runner.os != 'Windows'
+        run: |
+          ls -Al ./target/release-lto
+
+      - name: Upload Binaries as GitHub artifact
+        if: matrix.rust == 'nightly'
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: git-remote-codecommit-${{ matrix.os }}
+          path: |
+            target/release-lto/git-remote-codecommit
+            target/release-lto/git-remote-codecommit.exe
+          compression-level: 0
+
   finalize-coveralls-run:
     name: Finalize Coveralls Run
     needs: [check-and-test]
@@ -217,58 +242,10 @@ jobs:
           path: target/doc
           compression-level: 9
 
-  build-binaries:
-    name: Build Binaries
-    needs: [check-and-test]
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-        rust:
-          - nightly
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Rust (${{ matrix.rust }})
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          cache-shared-key: ${{ matrix.os }}-${{ matrix.rust }}
-
-      - name: Fetch cargo dependencies
-        run: cargo fetch --verbose --locked
-
-      - name: Build Binaries
-        run: cargo build --verbose --bins --workspace --frozen --profile=release-lto
-
-      - name: Print diagnostics
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          Get-ChildItem -Path .\target\release-lto
-
-      - name: Print diagnostics
-        if: runner.os != 'Windows'
-        run: |
-          ls -Al ./target/release-lto
-
-      - name: Upload Binaries as GitHub artifact
-        uses: actions/upload-artifact@v4.6.0
-        with:
-          name: git-remote-codecommit-${{ matrix.os }}
-          path: |
-            target/release-lto/git-remote-codecommit
-            target/release-lto/git-remote-codecommit.exe
-          compression-level: 0
-
   push-to-codecommit:
     concurrency: push-to-codecommit
     name: Push to CodeCommit
-    needs: [finalize-coveralls-run, build-docs, build-binaries]
+    needs: [finalize-coveralls-run, build-docs, check-and-test]
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
