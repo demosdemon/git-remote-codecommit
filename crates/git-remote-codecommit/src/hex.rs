@@ -1,33 +1,39 @@
-pub struct HexDisplay([u8; 32]);
+pub struct U256Hex([u8; 64]);
 
-impl core::fmt::Debug for HexDisplay {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        std::fmt::Display::fmt(self, f)
-    }
-}
-
-impl core::fmt::Display for HexDisplay {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl U256Hex {
+    fn new(bytes: [u8; 32]) -> Self {
         // this implementation avoids any heap allocations and is optimized by
         // the compiler to use vectorized instructions where available.
         //
         // with O3, the loop is unrolled and vectorized to use SIMD instructions
         //
         // https://rust.godbolt.org/z/seM19zEfv
-
         let mut buf = [0u8; 64];
         // SAFETY: 64 is evenly divisible by 2
         unsafe { buf.as_chunks_unchecked_mut::<2>() }
             .iter_mut()
-            .zip(self.0.as_ref())
-            .for_each(|(slot, &byte)| {
+            .zip(bytes)
+            .for_each(|(slot, byte)| {
                 *slot = byte_to_hex(byte);
             });
+        Self(buf)
+    }
 
+    fn as_str(&self) -> &str {
         // SAFETY: buf only contains valid ASCII hex characters
-        let buf = unsafe { core::str::from_utf8_unchecked(&buf) };
+        unsafe { core::str::from_utf8_unchecked(&self.0) }
+    }
+}
 
-        f.pad(buf)
+impl core::fmt::Debug for U256Hex {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.pad(self.as_str())
+    }
+}
+
+impl core::fmt::Display for U256Hex {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.pad(self.as_str())
     }
 }
 
@@ -45,12 +51,12 @@ const fn byte_to_hex(byte: u8) -> [u8; 2] {
     unsafe { [nibble_to_hex(byte >> 4), nibble_to_hex(byte & 0x0F)] }
 }
 
-pub trait HexDisplayExt {
-    fn hex_display(self) -> HexDisplay;
+pub trait IntoU256Hex {
+    fn into_u256_hex(self) -> U256Hex;
 }
 
-impl<T: Into<[u8; 32]>> HexDisplayExt for T {
-    fn hex_display(self) -> HexDisplay {
-        HexDisplay(self.into())
+impl<T: Into<[u8; 32]>> IntoU256Hex for T {
+    fn into_u256_hex(self) -> U256Hex {
+        U256Hex::new(self.into())
     }
 }

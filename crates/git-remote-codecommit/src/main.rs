@@ -30,7 +30,7 @@ use tracing::trace;
 use self::canonical_request::CanonicalRequest;
 use self::credential_scope::CredentialScope;
 use self::datetime::TimestampExt;
-use self::hex::HexDisplayExt;
+use self::hex::IntoU256Hex;
 use self::hostname::InferredHostname;
 use self::sdk_context::SdkContext;
 use self::string_to_sign::StringToSign;
@@ -265,7 +265,7 @@ fn generate_signature(
     format!(
         "{}Z{}",
         timestamp.sigv4_timestamp(),
-        signature.hex_display()
+        signature.into_u256_hex()
     )
 }
 

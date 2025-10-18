@@ -3,7 +3,7 @@ use std::io::Write;
 use hmac::digest::FixedOutput;
 use sha2::Digest;
 
-use crate::HexDisplayExt;
+use crate::IntoU256Hex;
 use crate::URL_PATH_PREFIX;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -16,7 +16,7 @@ impl CanonicalRequest<'_> {
     pub fn sha256(&self) -> impl core::fmt::Display + use<'_> {
         let mut hasher = sha2::Sha256::new();
         write!(hasher, "{self}").expect("writing to hasher cannot fail");
-        hasher.finalize_fixed().hex_display()
+        hasher.finalize_fixed().into_u256_hex()
     }
 }
 
