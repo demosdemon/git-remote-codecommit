@@ -39,7 +39,7 @@ Actively used on Windows, macOS, and low-resource Linux environments.
 
 ### MSRV
 
-The minimum supported Rust version is `1.86`.
+The minimum supported Rust version is `1.88`.
 
 ## Install
 
