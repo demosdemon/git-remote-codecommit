@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust (${{ matrix.rust }})
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -74,7 +74,7 @@ jobs:
       RUSTC_BOOTSTRAP: ${{ matrix.rustc_bootstrap }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust (${{ matrix.rust }})
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -126,7 +126,7 @@ jobs:
 
       - name: Upload Binaries as GitHub artifact
         if: matrix.rust == 'nightly'
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: git-remote-codecommit-${{ matrix.os }}
           path: |
@@ -146,7 +146,7 @@ jobs:
 
       - name: Upload Documentation as GitHub artifact
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.rust == 'nightly'}}
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v7
         with:
           name: docs
           path: target/doc
@@ -192,14 +192,14 @@ jobs:
 
       - name: Upload out if failed
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-failure-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           path: target/debug/build/git-remote-codecommit-*
           retention-days: 1
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
           path: target/debug/coverage/html/
@@ -226,7 +226,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set carryforward
         id: set_carryforward
         run: |
@@ -250,7 +250,7 @@ jobs:
       AWS_REGION: us-west-2
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # need the history in order to push to CodeCommit
 
@@ -261,7 +261,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download git-remote-codecommit
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: git-remote-codecommit-ubuntu-latest
           path: target/release-lto
