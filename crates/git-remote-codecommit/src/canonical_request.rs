@@ -1,7 +1,7 @@
-use std::io::Write;
+use std::fmt::Write;
 
-use hmac::digest::FixedOutput;
-use sha2::Digest;
+use hmac::digest::Digest;
+use hmac::digest::Output;
 
 use crate::IntoU256Hex;
 use crate::URL_PATH_PREFIX;
@@ -14,9 +14,24 @@ pub struct CanonicalRequest<'a> {
 
 impl CanonicalRequest<'_> {
     pub fn sha256(&self) -> impl core::fmt::Display + use<'_> {
-        let mut hasher = sha2::Sha256::new();
+        let mut hasher = DigestWriter(sha2::Sha256::new());
         write!(hasher, "{self}").expect("writing to hasher cannot fail");
         hasher.finalize_fixed().into_u256_hex()
+    }
+}
+
+struct DigestWriter<D>(D);
+
+impl<D: Digest> DigestWriter<D> {
+    fn finalize_fixed(self) -> Output<D> {
+        self.0.finalize()
+    }
+}
+
+impl<D: Digest> Write for DigestWriter<D> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.0.update(s.as_bytes());
+        Ok(())
     }
 }
 

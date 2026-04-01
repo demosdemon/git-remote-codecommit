@@ -22,6 +22,7 @@ use std::time::SystemTime;
 
 use anyhow::Context;
 use clap::Parser;
+use hmac::KeyInit;
 use hmac::Mac;
 use hmac::digest::FixedOutput;
 use tracing::debug;
