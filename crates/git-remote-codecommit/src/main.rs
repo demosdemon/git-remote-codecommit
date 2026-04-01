@@ -231,7 +231,7 @@ fn generate_url(
     format!(
         "https://{username}:{signature}@{hostname}/{URL_PATH_PREFIX}/{repo}",
         username = UrlSafeQuote(&username),
-        repo = parsed_uri.repository(),
+        repo = UrlSafeQuote(parsed_uri.repository()),
     )
 }
 
