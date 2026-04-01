@@ -67,7 +67,7 @@ fn compiler_probe(filename: impl AsRef<Path>) -> CompilerProbeResult {
             consider_rustc_bootstrap: false,
         }
     } else if let Some(rustc_bootstrap) = std::env::var_os("RUSTC_BOOTSTRAP") {
-        if compile_probe("bool_or.rs", true) {
+        if compile_probe(filename, true) {
             CompilerProbeResult {
                 supported: true,
                 consider_rustc_bootstrap: true,
