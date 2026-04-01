@@ -117,6 +117,8 @@ fn extract_hostname(hostname: &str) -> Option<(&str, Option<NonZeroU16>)> {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]
