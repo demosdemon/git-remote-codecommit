@@ -5,11 +5,12 @@ use hmac::digest::Output;
 
 use crate::IntoU256Hex;
 use crate::URL_PATH_PREFIX;
+use crate::hostname::Hostname;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CanonicalRequest<'a> {
     pub repo: &'a str,
-    pub hostname: &'a str,
+    pub hostname: &'a Hostname<'a>,
 }
 
 impl CanonicalRequest<'_> {
@@ -48,12 +49,13 @@ impl core::fmt::Display for CanonicalRequest<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hostname::InferredHostname;
 
     #[test]
     fn test_to_string() {
         let s = CanonicalRequest {
             repo: "my-repo",
-            hostname: "git-codecommit.us-east-1.amazonaws.com",
+            hostname: &Hostname::Inferred(InferredHostname::new("us-east-1")),
         }
         .to_string();
 
@@ -67,7 +69,7 @@ mod tests {
     fn test_sha256() {
         let s = CanonicalRequest {
             repo: "my-repo",
-            hostname: "git-codecommit.us-east-1.amazonaws.com",
+            hostname: &Hostname::Inferred(InferredHostname::new("us-east-1")),
         }
         .sha256()
         .to_string();

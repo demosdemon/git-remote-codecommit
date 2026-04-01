@@ -32,6 +32,8 @@ use self::canonical_request::CanonicalRequest;
 use self::credential_scope::CredentialScope;
 use self::datetime::TimestampExt;
 use self::hex::IntoU256Hex;
+use self::hostname::CliHostname;
+use self::hostname::Hostname;
 use self::hostname::InferredHostname;
 use self::sdk_context::SdkContext;
 use self::string_to_sign::StringToSign;
@@ -84,9 +86,9 @@ struct Cli {
     ///
     /// Where `${region}` is taken from the environment or profile and
     /// `${aws-partition}` is `amazonaws.com` for AWS regions and
-    /// `amazonaws.cn` for AWS China regions.
-    #[arg(long, env, value_name = "URL")]
-    code_commit_endpoint: Option<String>,
+    /// `amazonaws.com.cn` for AWS China regions.
+    #[arg(long, env, value_name = "HOSTNAME[:PORT]")]
+    code_commit_endpoint: Option<CliHostname>,
 
     /// The first argument to the git-remote helper.
     remote_name: String,
@@ -120,7 +122,7 @@ fn main() -> anyhow::Result<ExitCode> {
     let url = generate_url(
         SystemTime::now(),
         &parsed_uri,
-        code_commit_endpoint.as_deref(),
+        code_commit_endpoint.as_ref(),
         &sdk_context,
     );
     debug!(?url, "generated url");
@@ -205,18 +207,14 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
 fn generate_url(
     timestamp: SystemTime,
     parsed_uri: &ParsedUri<'_>,
-    override_endpoint: Option<&str>,
+    override_endpoint: Option<&CliHostname>,
     sdk_context: &SdkContext,
 ) -> String {
     let hostname = override_endpoint.map_or_else(
-        || {
-            std::borrow::Cow::Owned(
-                InferredHostname::new(sdk_context.region().as_ref()).to_string(),
-            )
-        },
-        std::borrow::Cow::Borrowed,
+        || Hostname::Inferred(InferredHostname::new(sdk_context.region().as_ref())),
+        |cli| Hostname::Cli(cli.clone()),
     );
-    debug!(?hostname, "using hostname for codecommit endpoint");
+    debug!(%hostname, "using hostname for codecommit endpoint");
 
     let username = Username {
         access_key_id: sdk_context.credentials().access_key_id(),
@@ -237,7 +235,7 @@ fn generate_url(
 
 fn generate_signature(
     timestamp: SystemTime,
-    hostname: &str,
+    hostname: &Hostname<'_>,
     repo: &str,
     context: &SdkContext,
 ) -> String {
@@ -341,7 +339,7 @@ mod tests {
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
             &parsed_url,
-            Some("localhost:8443"),
+            Some(&"localhost:8443".parse().expect("valid cli hostname")),
             &sdk_context,
         );
 
@@ -390,7 +388,7 @@ mod tests {
         let url = generate_url(
             SystemTime::UNIX_EPOCH,
             &parsed_url,
-            Some("localhost:8443"),
+            Some(&"localhost:8443".parse().expect("valid cli hostname")),
             &sdk_context,
         );
 

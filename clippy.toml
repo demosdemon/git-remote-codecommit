@@ -2,3 +2,5 @@
 # for full configuration options.
 
 msrv = "1.91.1"
+
+doc-valid-idents = ["CodeCommit"]

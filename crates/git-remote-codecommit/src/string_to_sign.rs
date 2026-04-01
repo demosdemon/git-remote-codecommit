@@ -30,6 +30,8 @@ impl core::fmt::Display for StringToSign<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hostname::Hostname;
+    use crate::hostname::InferredHostname;
 
     #[test]
     fn test_to_string() {
@@ -41,7 +43,7 @@ mod tests {
             },
             canonical_request: CanonicalRequest {
                 repo: "my-repo",
-                hostname: "git-codecommit.us-east-1.amazonaws.com",
+                hostname: &Hostname::Inferred(InferredHostname::new("us-east-1")),
             },
         }
         .to_string();
