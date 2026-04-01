@@ -177,8 +177,14 @@ fn exec_replace(mut cmd: std::process::Command) -> anyhow::Result<ExitCode> {
         .wait()
         .context("failed to wait for subprocess")?;
 
-    #[allow(clippy::cast_sign_loss)]
-    Ok(ExitCode::from_raw(exit.code().unwrap_or(0) as u32))
+    #[allow(
+        clippy::cast_sign_loss,
+        reason = "originally a u32, cast to i32 for stdlib api, then cast back to u32 for ExitCode"
+    )]
+    // https://github.com/rust-lang/rust/blob/2bd7a97871a74d4333bd3edb6564136167ac604b/library/std/src/sys/process/windows.rs#L751-L761
+    // imp::ExitStatus::code for Windows always returns Some
+    let code = exit.code().context("windows exit code must return Some")? as u32;
+    Ok(ExitCode::from_raw(code))
 }
 
 #[cfg(not(any(unix, windows)))]

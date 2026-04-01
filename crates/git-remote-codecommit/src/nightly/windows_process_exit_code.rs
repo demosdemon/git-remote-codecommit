@@ -20,8 +20,8 @@ pub(crate) trait ExitCodeExt {
 #[cfg(not(windows_process_exit_code_from))]
 impl ExitCodeExt for std::process::ExitCode {
     fn from_raw(code: u32) -> Self {
-        if (code & 0xff) == code {
-            std::process::ExitCode::from((code & 0xff) as u8)
+        if let Ok(code) = code.try_into() {
+            std::process::ExitCode::from(code)
         } else {
             std::process::ExitCode::FAILURE
         }
