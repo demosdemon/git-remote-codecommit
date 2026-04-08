@@ -155,7 +155,7 @@ jobs:
       - name: Configure AWS credentials
         if: github.repository == 'demosdemon/git-remote-codecommit'
         continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@v6.0.0
+        uses: aws-actions/configure-aws-credentials@v6.1.0
         env:
           RUST_BACKTRACE: 1
           AWS_REGION: us-west-2
@@ -255,7 +255,7 @@ jobs:
           fetch-depth: 0 # need the history in order to push to CodeCommit
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6.0.0
+        uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
           role-to-assume: arn:aws:iam::339712996426:role/github-git-remote-codecommit
           aws-region: ${{ env.AWS_REGION }}
