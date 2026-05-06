@@ -205,45 +205,11 @@ jobs:
           path: target/debug/coverage/html/
           retention-days: 7
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          files: target/debug/coverage/lcov
-          flags: unittests
-          use_oidc: true
-
-      - name: Coveralls Parallel
-        uses: coverallsapp/github-action@v2
-        with:
-          files: target/debug/coverage/lcov
-          flag-name: code-coverage-report-${{ matrix.rust }}-${{ matrix.os }}${{ matrix.rust != 'nightly' && matrix.rustc_bootstrap == '1' && '-bootstrap' || '' }}
-          parallel: true
-
-  finalize-coveralls-run:
-    name: Finalize Coveralls Run
-    needs: [check-and-test]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set carryforward
-        id: set_carryforward
-        run: |
-          echo "carryforward<<EOF" >> $GITHUB_OUTPUT
-          python3 .github/scripts/matrix.py >> $GITHUB_OUTPUT
-          echo EOF >> $GITHUB_OUTPUT
-      - name: Finalize Coveralls Run
-        uses: coverallsapp/github-action@v2
-        with:
-          parallel-finished: true
-          carryforward: ${{ steps.set_carryforward.outputs.carryforward }}
-
   push-to-codecommit:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'demosdemon/git-remote-codecommit'
     concurrency: push-to-codecommit
     name: Push to CodeCommit
-    needs: [finalize-coveralls-run]
+    needs: [check-and-test]
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
