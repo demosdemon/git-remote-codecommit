@@ -1,4 +1,4 @@
-#![cfg_attr(build_feature_probe, feature(bool_to_result))]
+#![cfg_attr(probe_feature_gate, feature(bool_to_result))]
 
 #[cfg(build_feature_probe)]
 const _: () = {
@@ -12,12 +12,12 @@ const _: () = {
 #[cfg(build_feature_probe)]
 const _: Option<&str> = option_env!("RUSTC_BOOTSTRAP");
 
-#[cfg(not(bool_to_result))]
+#[cfg(all(not(bool_to_result), not(build_feature_probe)))]
 pub(crate) trait BoolExt {
     fn ok_or<E>(self, or: E) -> Result<(), E>;
 }
 
-#[cfg(not(bool_to_result))]
+#[cfg(all(not(bool_to_result), not(build_feature_probe)))]
 impl BoolExt for bool {
     fn ok_or<E>(self, or: E) -> Result<(), E> {
         if self { Ok(()) } else { Err(or) }

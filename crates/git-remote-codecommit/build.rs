@@ -1,11 +1,21 @@
 // Largely lifted from https://github.com/dtolnay/anyhow/blob/1d7ef1db5414ac155ad6254685673c90ea4c7d77/build.rs
 // under the Apache License, Version 2.0 or the MIT License, same as this crate.
 
-//! Probes the compiler to determine whether it supports specific unstable
-//! features and enables them if so.
+//! Probes the compiler to classify each tracked library feature into one of
+//! three states and emits cfgs accordingly:
 //!
-//! This is currently used to check if `bool_to_result` is available, which is
-//! very new but replaces the manually implemented `BoolExt` trait.
+//! * **unavailable** — neither cfg set; the hand-written shim is used.
+//! * **unstable-gated** — both `<feature>` and `<feature>_unstable` set; the
+//!   std API is used and `main.rs` emits `#![feature(<feature>)]`.
+//! * **stabilized** — only `<feature>` set; the std API is used with no feature
+//!   gate (emitting one would trip the `stable_features` lint).
+//!
+//! Detection uses two passes per feature (see `detect_feature`): an ungated
+//! compile that only succeeds once the API is stable, then the original
+//! gated/`RUSTC_BOOTSTRAP` probe for the unstable case.
+//!
+//! Currently tracks `bool_to_result` and `windows_process_exit_code_from`,
+//! which replace the manually implemented `BoolExt` and `ExitCodeExt` traits.
 
 use std::ffi::OsString;
 use std::fs;
@@ -22,36 +32,80 @@ macro_rules! die {
 
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(build_feature_probe)");
+    println!("cargo:rustc-check-cfg=cfg(probe_feature_gate)");
     println!("cargo:rustc-check-cfg=cfg(bool_to_result)");
+    println!("cargo:rustc-check-cfg=cfg(bool_to_result_unstable)");
     println!("cargo:rustc-check-cfg=cfg(windows_process_exit_code_from)");
+    println!("cargo:rustc-check-cfg=cfg(windows_process_exit_code_from_unstable)");
     println!("cargo:rerun-if-changed=src/nightly/mod.rs");
     println!("cargo:rerun-if-changed=src/nightly/bool_or.rs");
     println!("cargo:rerun-if-changed=src/nightly/windows_process_exit_code.rs");
 
-    let CompilerProbeResult {
-        supported: bool_to_result,
+    let Detection {
+        available,
+        needs_gate,
         consider_rustc_bootstrap,
-    } = compiler_probe("bool_or.rs");
+    } = detect_feature("bool_or.rs");
 
-    if bool_to_result {
+    if available {
         println!("cargo:rustc-cfg=bool_to_result");
+    }
+    if needs_gate {
+        println!("cargo:rustc-cfg=bool_to_result_unstable");
     }
 
     #[cfg(windows)]
     let consider_rustc_bootstrap = {
-        let CompilerProbeResult {
-            supported,
+        let Detection {
+            available,
+            needs_gate,
             consider_rustc_bootstrap: consider_rustc_bootstrap_windows,
-        } = compiler_probe("windows_process_exit_code.rs");
-        if supported {
+        } = detect_feature("windows_process_exit_code.rs");
+        if available {
             println!("cargo:rustc-cfg=windows_process_exit_code_from");
         }
-
+        if needs_gate {
+            println!("cargo:rustc-cfg=windows_process_exit_code_from_unstable");
+        }
         consider_rustc_bootstrap || consider_rustc_bootstrap_windows
     };
 
     if consider_rustc_bootstrap {
         println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
+    }
+}
+
+struct Detection {
+    available: bool,
+    needs_gate: bool,
+    consider_rustc_bootstrap: bool,
+}
+
+fn detect_feature(filename: impl AsRef<Path>) -> Detection {
+    let filename = filename.as_ref();
+
+    // Pass 1 — ungated: detects stabilization. RUSTC_BOOTSTRAP is removed and
+    // no `#![feature]` attribute is emitted (probe_feature_gate is not set), so
+    // this only succeeds when the API is usable on the stable channel.
+    if compile_probe(filename, false, false) {
+        return Detection {
+            available: true,
+            needs_gate: false,
+            consider_rustc_bootstrap: false,
+        };
+    }
+
+    // Pass 2 — gated: the feature is not stable; probe it as an unstable,
+    // feature-gated API, reusing the existing RUSTC_BOOTSTRAP escape hatch.
+    let CompilerProbeResult {
+        supported,
+        consider_rustc_bootstrap,
+    } = compiler_probe(filename);
+
+    Detection {
+        available: supported,
+        needs_gate: supported,
+        consider_rustc_bootstrap,
     }
 }
 
@@ -61,13 +115,13 @@ struct CompilerProbeResult {
 }
 
 fn compiler_probe(filename: impl AsRef<Path>) -> CompilerProbeResult {
-    if compile_probe(&filename, false) {
+    if compile_probe(&filename, true, false) {
         CompilerProbeResult {
             supported: true,
             consider_rustc_bootstrap: false,
         }
     } else if let Some(rustc_bootstrap) = std::env::var_os("RUSTC_BOOTSTRAP") {
-        if compile_probe(filename, true) {
+        if compile_probe(filename, true, true) {
             CompilerProbeResult {
                 supported: true,
                 consider_rustc_bootstrap: true,
@@ -91,7 +145,7 @@ fn compiler_probe(filename: impl AsRef<Path>) -> CompilerProbeResult {
     }
 }
 
-fn compile_probe(filename: impl AsRef<Path>, rustc_bootstrap: bool) -> bool {
+fn compile_probe(filename: impl AsRef<Path>, feature_gate: bool, rustc_bootstrap: bool) -> bool {
     if std::env::var_os("RUSTC_STAGE").is_some() {
         println!("cargo:rerun-if-env-changed=RUSTC_STAGE");
         // We are running inside rustc bootstrap. This is a highly non-standard
@@ -132,6 +186,10 @@ fn compile_probe(filename: impl AsRef<Path>, rustc_bootstrap: bool) -> bool {
         .arg("--out-dir")
         .arg(&out_subdir)
         .arg(probefile);
+
+    if feature_gate {
+        cmd.arg("--cfg=probe_feature_gate");
+    }
 
     if let Some(target) = std::env::var_os("TARGET") {
         cmd.arg("--target").arg(target);

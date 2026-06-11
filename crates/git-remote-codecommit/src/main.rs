@@ -1,8 +1,8 @@
 #![cfg_attr(
-    windows_process_exit_code_from,
+    windows_process_exit_code_from_unstable,
     feature(windows_process_exit_code_from)
 )]
-#![cfg_attr(bool_to_result, feature(bool_to_result))]
+#![cfg_attr(bool_to_result_unstable, feature(bool_to_result))]
 
 mod canonical_request;
 mod credential_scope;
