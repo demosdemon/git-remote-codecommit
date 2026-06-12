@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-24.04
         rust:
           - nightly
     runs-on: ${{ matrix.os }}
@@ -43,14 +43,14 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-15
+          - macos-26
+          - windows-2025
+          - windows-2025-vs2026
         rust:
-          - "1.91.1"
-          - "1.92"
-          - "1.93"
-          - "1.94"
+          - "1.91.1" # MSRV
           - stable
           - beta
           - nightly
@@ -59,13 +59,22 @@ jobs:
           - "1"
         exclude:
           # bootstrap is only relevant for non-nightly toolchains
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             rust: nightly
             rustc_bootstrap: "0"
-          - os: macos-latest
+          - os: ubuntu-24.04-arm
             rust: nightly
             rustc_bootstrap: "0"
-          - os: windows-latest
+          - os: macos-15
+            rust: nightly
+            rustc_bootstrap: "0"
+          - os: macos-26
+            rust: nightly
+            rustc_bootstrap: "0"
+          - os: windows-2025
+            rust: nightly
+            rustc_bootstrap: "0"
+          - os: windows-2025-vs2026
             rust: nightly
             rustc_bootstrap: "0"
     runs-on: ${{ matrix.os }}
@@ -135,17 +144,17 @@ jobs:
           compression-level: 0
 
       - name: Build Documentation
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.rust == 'nightly'}}
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.rust == 'nightly'}}
         run: cargo doc --verbose --workspace --document-private-items --frozen
 
       - name: Print diagnostics
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.rust == 'nightly'}}
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.rust == 'nightly'}}
         run: |
           find ./target/doc -ls
           du -hd1 ./target/doc | sort -h
 
       - name: Upload Documentation as GitHub artifact
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.rust == 'nightly'}}
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.rust == 'nightly'}}
         uses: actions/upload-artifact@v7
         with:
           name: docs
@@ -210,7 +219,7 @@ jobs:
     concurrency: push-to-codecommit
     name: Push to CodeCommit
     needs: [check-and-test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       RUST_BACKTRACE: 1
       AWS_REGION: us-west-2
@@ -229,7 +238,7 @@ jobs:
       - name: Download git-remote-codecommit
         uses: actions/download-artifact@v8
         with:
-          name: git-remote-codecommit-ubuntu-latest
+          name: git-remote-codecommit-ubuntu-24.04
           path: target/release-lto
 
       - name: Make git-remote-codecommit executable
