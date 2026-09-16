@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-24.04
+          - ubuntu-26.04
         rust:
           - nightly
     runs-on: ${{ matrix.os }}
@@ -43,9 +43,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
-          - macos-15
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
           - macos-26
           - windows-2025
           - windows-2025-vs2026
@@ -59,13 +58,10 @@ jobs:
           - "1"
         exclude:
           # bootstrap is only relevant for non-nightly toolchains
-          - os: ubuntu-24.04
+          - os: ubuntu-26.04
             rust: nightly
             rustc_bootstrap: "0"
-          - os: ubuntu-24.04-arm
-            rust: nightly
-            rustc_bootstrap: "0"
-          - os: macos-15
+          - os: ubuntu-26.04-arm
             rust: nightly
             rustc_bootstrap: "0"
           - os: macos-26
