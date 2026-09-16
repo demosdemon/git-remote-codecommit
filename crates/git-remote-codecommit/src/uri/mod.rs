@@ -50,8 +50,9 @@ impl<'a> ParsedUri<'a> {
     }
 
     pub fn new(input: &'a str) -> Result<Self, ParseUriError> {
-        // Git removes this prefix before invoking the helper; but, we're checking for
-        // it anyways to be safe as otherwise it would be an invalid URI.
+        // Git removes this prefix before invoking the helper; but, we're
+        // checking for it anyways to be safe as otherwise it would be
+        // an invalid URI.
         let value = input.strip_prefix(PREFIX_WITH_REGION).unwrap_or(input);
 
         let (scheme, authority, path, query, fragment) = URI::try_from(value)?.into_parts();
