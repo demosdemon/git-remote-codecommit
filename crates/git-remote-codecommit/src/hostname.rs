@@ -108,9 +108,9 @@ fn extract_hostname(hostname: &str) -> Option<(&str, Option<NonZeroU16>)> {
         }
     };
 
-    // SAFETY: We have validated that `host_len` is a valid character boundary in
-    // `hostname`. This removes the need for a bounds check when slicing `hostname`
-    // to get the hostname.
+    // SAFETY: We have validated that `host_len` is a valid character boundary
+    // in `hostname`. This removes the need for a bounds check when slicing
+    // `hostname` to get the hostname.
     unsafe { core::hint::assert_unchecked(hostname.is_char_boundary(host_len)) };
     Some((&hostname[..host_len], port))
 }
