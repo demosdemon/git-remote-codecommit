@@ -14,8 +14,12 @@
 //! compile that only succeeds once the API is stable, then the original
 //! gated/`RUSTC_BOOTSTRAP` probe for the unstable case.
 //!
-//! Currently tracks `bool_to_result` and `windows_process_exit_code_from`,
-//! which replace the manually implemented `BoolExt` and `ExitCodeExt` traits.
+//! Currently tracks `windows_process_exit_code_from`, which replaces the
+//! manually implemented `ExitCodeExt` trait.
+
+// The only remaining probe targets a Windows-only API, so the probing
+// machinery is unreferenced everywhere else.
+#![cfg_attr(not(windows), expect(dead_code))]
 
 use std::ffi::OsString;
 use std::fs;
@@ -33,33 +37,17 @@ macro_rules! die {
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(build_feature_probe)");
     println!("cargo:rustc-check-cfg=cfg(probe_feature_gate)");
-    println!("cargo:rustc-check-cfg=cfg(bool_to_result)");
-    println!("cargo:rustc-check-cfg=cfg(bool_to_result_unstable)");
     println!("cargo:rustc-check-cfg=cfg(windows_process_exit_code_from)");
     println!("cargo:rustc-check-cfg=cfg(windows_process_exit_code_from_unstable)");
     println!("cargo:rerun-if-changed=src/nightly/mod.rs");
-    println!("cargo:rerun-if-changed=src/nightly/bool_or.rs");
     println!("cargo:rerun-if-changed=src/nightly/windows_process_exit_code.rs");
 
-    let Detection {
-        available,
-        needs_gate,
-        consider_rustc_bootstrap,
-    } = detect_feature("bool_or.rs");
-
-    if available {
-        println!("cargo:rustc-cfg=bool_to_result");
-    }
-    if needs_gate {
-        println!("cargo:rustc-cfg=bool_to_result_unstable");
-    }
-
     #[cfg(windows)]
-    let consider_rustc_bootstrap = {
+    {
         let Detection {
             available,
             needs_gate,
-            consider_rustc_bootstrap: consider_rustc_bootstrap_windows,
+            consider_rustc_bootstrap,
         } = detect_feature("windows_process_exit_code.rs");
         if available {
             println!("cargo:rustc-cfg=windows_process_exit_code_from");
@@ -67,11 +55,9 @@ fn main() {
         if needs_gate {
             println!("cargo:rustc-cfg=windows_process_exit_code_from_unstable");
         }
-        consider_rustc_bootstrap || consider_rustc_bootstrap_windows
-    };
-
-    if consider_rustc_bootstrap {
-        println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
+        if consider_rustc_bootstrap {
+            println!("cargo:rerun-if-env-changed=RUSTC_BOOTSTRAP");
+        }
     }
 }
 

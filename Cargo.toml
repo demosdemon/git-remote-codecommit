@@ -15,7 +15,7 @@ readme = "README.md"
 keywords = ["git", "git-remote", "codecommit"]
 categories = ["command-line-utilities", "development-tools"]
 publish = true
-rust-version = "1.91.1"
+rust-version = "1.98.1"
 
 [workspace.lints.rust]
 let_underscore_drop = "warn"
