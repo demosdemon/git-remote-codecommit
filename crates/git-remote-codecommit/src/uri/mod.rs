@@ -1,4 +1,5 @@
 #![cfg_attr(not(bool_to_result), allow(unstable_name_collisions))]
+#![cfg_attr(bool_to_result, allow(clippy::incompatible_msrv))]
 
 mod error;
 
