@@ -50,7 +50,7 @@ jobs:
           - windows-2025
           - windows-2025-vs2026
         rust:
-          - "1.91.1" # MSRV
+          - "1.98.1" # MSRV
           - stable
           - beta
           - nightly

@@ -2,7 +2,6 @@
     windows_process_exit_code_from_unstable,
     feature(windows_process_exit_code_from)
 )]
-#![cfg_attr(bool_to_result_unstable, feature(bool_to_result))]
 
 mod canonical_request;
 mod credential_scope;
@@ -10,6 +9,7 @@ mod datetime;
 mod hex;
 mod hostname;
 mod logging;
+#[cfg(windows)]
 mod nightly;
 mod sdk_context;
 mod string_to_sign;

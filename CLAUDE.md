@@ -35,11 +35,11 @@ The binary is invoked by git as a remote helper for `codecommit://[profile@]repo
    - `username.rs` → generate HTTP Basic auth username from signature
 5. Exec `git remote-https` with the signed URL (Unix: `execvp`, Windows: subprocess with Ctrl-C handler)
 
-**Compiler feature probing** (`build.rs`, `src/nightly/`): The build script probes for unstable Rust features (`bool_to_result`, `windows_process_exit_code_from`) and sets cfg flags so the code can use them when available.
+**Compiler feature probing** (`build.rs`, `src/nightly/`): The build script probes for the unstable `windows_process_exit_code_from` feature and sets cfg flags so the code can use it when available.
 
 ## Key Constraints
 
-- **MSRV**: 1.91.1 (enforced in `clippy.toml` and CI)
+- **MSRV**: 1.98.1 (enforced in `clippy.toml` and CI)
 - **Edition**: Rust 2024
 - **Clippy**: Pedantic warnings enabled at workspace level
 - **Rustfmt**: Nightly features used (format_macro_matchers, group_imports, imports_granularity)

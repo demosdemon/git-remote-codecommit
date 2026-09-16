@@ -1,6 +1,6 @@
 # See https://doc.rust-lang.org/clippy/lint_configuration.html
 # for full configuration options.
 
-msrv = "1.91.1"
+msrv = "1.98.1"
 
 doc-valid-idents = ["CodeCommit"]
